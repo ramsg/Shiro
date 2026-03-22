@@ -322,10 +322,17 @@ const Note=({text,accent})=>(
 function LoginScreen({onLogin,onCancel}){
   const lang=useLang();
   const [uid,setUid]=useState("");const [pw,setPw]=useState("");
-  const [show,setShow]=useState(false);const [err,setErr]=useState("");const [shaking,shake]=useState(false);
-  const attempt=()=>{
-    if(uid.trim()==="ramesh"&&pw==="Sh!r0"){onLogin();}
-    else{setErr(tx(t.loginErr,lang));shake(true);setTimeout(()=>shake(false),500);}
+  const [show,setShow]=useState(false);const [err,setErr]=useState("");const [shaking,shake]=useState(false);const [loading,setLoading]=useState(false);
+  const attempt=async()=>{
+    if(!uid.trim()||!pw){setErr("Please enter username and password");shake(true);setTimeout(()=>shake(false),500);return;}
+    setLoading(true);
+    try{
+      const res=await fetch("/.netlify/functions/verify-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
+      const data=await res.json();
+      if(data.token&&uid.trim()==="ramesh"){onLogin();}
+      else{setErr(tx(t.loginErr,lang));shake(true);setTimeout(()=>shake(false),500);}
+    }catch(e){setErr("Login failed");shake(true);setTimeout(()=>shake(false),500);}
+    setLoading(false);
   };
   const fontClass=lang==="kn"?"kn":"";
   return(
