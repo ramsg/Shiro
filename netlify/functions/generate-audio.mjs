@@ -46,30 +46,63 @@ async function generateAudioFromScript(script) {
   });
 }
 
-async function uploadToBunnyCDN(audioBuffer, filePath) {
-  const uploadUrl = `https://${process.env.BUNNY_FTP_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE}/audio/${filePath}`;
+async function commitToGitHub(filePath, fileContent, message) {
+  const [owner, repo] = process.env.GITHUB_REPO.split('/');
+  const branch = 'main';
 
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'AccessKey': process.env.BUNNY_CDN_API_KEY,
-      'Content-Type': 'audio/mpeg'
-    },
-    body: audioBuffer
-  });
-
-  if (!response.ok) {
-    throw new Error(`Bunny upload failed with status ${response.status}`);
+  // Get current file SHA if it exists (needed for updates)
+  let sha = null;
+  try {
+    const getRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+      {
+        headers: {
+          'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      }
+    );
+    if (getRes.ok) {
+      const data = await getRes.json();
+      sha = data.sha;
+    }
+  } catch (error) {
+    console.log('File does not exist yet, creating new');
   }
 
-  // Return public CDN URL
-  return `https://${process.env.BUNNY_STORAGE_ZONE}.b-cdn.net/audio/${filePath}`;
+  // Encode content to base64
+  const encodedContent = Buffer.from(fileContent).toString('base64');
+
+  // Commit to GitHub
+  const commitRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: message,
+        content: encodedContent,
+        branch: branch,
+        ...(sha && { sha })
+      })
+    }
+  );
+
+  if (!commitRes.ok) {
+    const error = await commitRes.json();
+    throw new Error(`GitHub commit failed: ${error.message}`);
+  }
+
+  return true;
 }
 
 async function getManifest() {
   try {
-    const url = `https://${process.env.BUNNY_STORAGE_ZONE}.b-cdn.net/manifest.json`;
-    const res = await fetch(url);
+    const res = await fetch('/.netlify/functions/get-manifest');
     if (res.ok) {
       return await res.json();
     }
@@ -80,20 +113,11 @@ async function getManifest() {
 }
 
 async function saveManifest(manifest) {
-  const uploadUrl = `https://${process.env.BUNNY_FTP_HOSTNAME}/${process.env.BUNNY_STORAGE_ZONE}/manifest.json`;
-
-  const response = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'AccessKey': process.env.BUNNY_CDN_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(manifest)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to save manifest with status ${response.status}`);
-  }
+  await commitToGitHub(
+    'audio/manifest.json',
+    JSON.stringify(manifest, null, 2),
+    'Update audio manifest with generated files'
+  );
 }
 
 export default async (req, context) => {
@@ -122,11 +146,16 @@ export default async (req, context) => {
     const audioBuffer = await generateAudioFromScript(script);
     console.log(`Audio generated: ${audioBuffer.length} bytes`);
 
-    // 2. Upload to Bunny CDN
-    console.log('Uploading to Bunny CDN...');
+    // 2. Commit audio to GitHub
+    console.log('Committing to GitHub...');
     const fileName = `${type}/${day}.mp3`;
-    const cdnUrl = await uploadToBunnyCDN(audioBuffer, fileName);
-    console.log(`Uploaded to: ${cdnUrl}`);
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+    await commitToGitHub(
+      `audio/${fileName}`,
+      base64Audio,
+      `Generate audio for ${type} ${day}`
+    );
+    console.log(`Committed to: audio/${fileName}`);
 
     // 3. Update manifest
     console.log('Updating manifest...');
@@ -134,14 +163,14 @@ export default async (req, context) => {
     if (!manifest[type]) manifest[type] = {};
     manifest[type][day] = {
       generatedAt: new Date().toISOString(),
-      url: cdnUrl,
+      url: `/audio/${fileName}`,
       size: audioBuffer.length
     };
     await saveManifest(manifest);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, url: cdnUrl, size: audioBuffer.length }),
+      body: JSON.stringify({ success: true, url: `/audio/${fileName}`, size: audioBuffer.length }),
       headers
     };
   } catch (error) {

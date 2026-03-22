@@ -10,17 +10,17 @@ export default async (req, context) => {
   }
 
   try {
-    const url = `https://${process.env.BUNNY_STORAGE_ZONE}.b-cdn.net/manifest.json`;
-    const res = await fetch(url);
+    // Try to fetch from static /audio/manifest.json (served by Netlify)
+    const res = await fetch('https://' + req.headers.host + '/audio/manifest.json');
 
-    if (!res.ok) {
-      return { statusCode: 200, body: JSON.stringify({ daily: {}, weekly: {} }), headers };
+    if (res.ok) {
+      const manifest = await res.json();
+      return { statusCode: 200, body: JSON.stringify(manifest), headers };
     }
-
-    const manifest = await res.json();
-    return { statusCode: 200, body: JSON.stringify(manifest), headers };
   } catch (error) {
-    console.error('Error fetching manifest:', error);
-    return { statusCode: 200, body: JSON.stringify({ daily: {}, weekly: {} }), headers };
+    console.log('Manifest not found:', error.message);
   }
+
+  // Return empty manifest if not found
+  return { statusCode: 200, body: JSON.stringify({ daily: {}, weekly: {} }), headers };
 };

@@ -74,18 +74,17 @@ export default async (req, context) => {
   }
 
   try {
-    const url = `https://${process.env.BUNNY_STORAGE_ZONE}.b-cdn.net/tasks.json`;
-    const res = await fetch(url);
+    // Try to fetch from static /audio/tasks.json (served by Netlify)
+    const res = await fetch('https://' + req.headers.host + '/audio/tasks.json');
 
-    if (!res.ok) {
-      // Return default tasks if file doesn't exist
-      return { statusCode: 200, body: JSON.stringify(DEFAULT_TASKS), headers };
+    if (res.ok) {
+      const tasks = await res.json();
+      return { statusCode: 200, body: JSON.stringify(tasks), headers };
     }
-
-    const tasks = await res.json();
-    return { statusCode: 200, body: JSON.stringify(tasks), headers };
   } catch (error) {
-    console.error('Error fetching tasks:', error);
-    return { statusCode: 200, body: JSON.stringify(DEFAULT_TASKS), headers };
+    console.log('Tasks file not found, using defaults:', error.message);
   }
+
+  // Return default tasks if file doesn't exist
+  return { statusCode: 200, body: JSON.stringify(DEFAULT_TASKS), headers };
 };
