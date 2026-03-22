@@ -1,5 +1,11 @@
 {
-  "daily": {},
+  "daily": {
+    "monday": {
+      "generatedAt": "2026-03-22T13:58:53.241Z",
+      "url": "/audio/daily/monday.mp3",
+      "size": 847872
+    }
+  },
   "weekly": {
     "sunday": {
       "generatedAt": "2026-03-22T13:58:43.860Z",
