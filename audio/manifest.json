@@ -4,6 +4,11 @@
       "generatedAt": "2026-03-22T14:11:24.629Z",
       "url": "/audio/daily/monday.mp3",
       "size": 847872
+    },
+    "thursday": {
+      "generatedAt": "2026-03-22T14:27:37.418Z",
+      "url": "/audio/daily/thursday.mp3",
+      "size": 896256
     }
   },
   "weekly": {
