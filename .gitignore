@@ -7,4 +7,6 @@ build/
 *.log
 .DS_Store
 .netlify
+.dev.vars
+.wrangler/
 kannada-podcast-generator/node_modules/

@@ -1,0 +1,14 @@
+name = "farm-dashboard"
+compatibility_date = "2026-03-22"
+
+[env.development]
+name = "farm-dashboard-dev"
+vars = { ENVIRONMENT = "development" }
+
+[build]
+command = ""
+
+[[kv_namespaces]]
+binding = "AUDIO_CACHE"
+id = "farm-audio-cache"
+preview_id = "farm-audio-cache-preview"
