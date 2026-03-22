@@ -19,17 +19,19 @@ export async function onRequest(context) {
     const [owner, repo] = env.GITHUB_REPO.split('/');
     const res = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/audio/manifest.json`,
-      { headers: { 'Authorization': `token ${env.GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' } }
+      { headers: { 'Authorization': `token ${env.GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'farm-dashboard' } }
     );
 
     if (res.ok) {
       const data = await res.json();
-      // Cloudflare: decode base64 using atob
       const manifest = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      console.log('Manifest loaded from GitHub:', Object.keys(manifest.daily || {}));
       return json(manifest);
+    } else {
+      console.log('GitHub manifest fetch failed:', res.status, await res.text());
     }
   } catch (e) {
-    console.log('Manifest not found:', e.message);
+    console.log('Manifest error:', e.message);
   }
 
   return json({ daily: {}, weekly: {} });
