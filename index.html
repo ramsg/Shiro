@@ -360,12 +360,65 @@ function LoginScreen({onLogin,onCancel}){
 }
 
 /* ─── OVERVIEW ─── */
-function OverviewTab({day,setDay}){
+function OverviewTab({day,setDay,audioManifest,isAdmin}){
   const lang=useLang();
   const wdays=lang==="kn"?weekDaysKn:weekDaysEn;
   const wdayKeys=weekDaysEn;
   const [openMonth,setOpenMonth]=useState("April");
+  const [autoplayFailed,setAutoplayFailed]=useState(false);
   const curMonthEn=new Date().toLocaleString("default",{month:"long"});
+
+  React.useEffect(()=>{
+    if(lang!=="kn"||isAdmin)return;
+    const today=new Date().toLocaleDateString("en-US",{weekday:"long"}).toLowerCase();
+    const isSunday=today==="sunday";
+    const audioType=isSunday?"weekly":"daily";
+    const audioDay=isSunday?"sunday":today;
+    const audioFile=isSunday?audioManifest.weekly?.[audioDay]:audioManifest.daily?.[audioDay];
+    if(!audioFile?.url)return;
+    const audioPlayer=document.getElementById("podcast-player")||{play:()=>Promise.reject()};
+    audioPlayer.src=audioFile.url;
+    audioPlayer.play?.().catch(()=>{setAutoplayFailed(true);});
+  },[lang,isAdmin,audioManifest]);
+
+  const playPodcast = async () => {
+      const player = document.getElementById('podcast-player');
+      const button = document.getElementById('play-podcast-btn');
+
+      button.textContent = 'Generating...';
+      button.disabled = true;
+
+      const script = `HOST: ಇಂದಿನ ಕೃಷಿ ಕೆಲಸದ ನಿಮಿಷಾ. Today's farm tasks:\nHOST: 6:00–6:30 ನೀರಾವರಿ ತಪಾಸಣೆ. Irrigation check: verify drip lines, clean filters.\nEXPERT: 7:00–8:00 ಹವಾಮಾನ ಪರಿಶೀಲನೆ. Weather check: record temperature and humidity.\nHOST: 9:00–10:00 ದೃಶ್ಯ ಗಸ್ತು. Visual scouting: inspect trees for pests and disease.`;
+
+      try {
+        const res = await fetch("/.netlify/functions/generate-audio", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${adminToken||""}`
+          },
+          body: JSON.stringify({ type:"daily", day:new Date().toLocaleDateString("en-US",{weekday:"long"}).toLowerCase(), script })
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          player.src = url;
+          player.style.display = 'block';
+          player.play();
+          button.style.display = 'none';
+        } else {
+          console.error("Failed to generate podcast");
+          button.textContent = 'Generation Failed. Retry?';
+          button.disabled = false;
+        }
+      } catch (error) {
+        console.error("Error generating podcast:", error);
+        button.textContent = 'Generation Failed. Retry?';
+        button.disabled = false;
+      }
+  }
+
   return(
     <div className="fade-in">
       <div className="g4">
@@ -388,6 +441,23 @@ function OverviewTab({day,setDay}){
         {/* Daily */}
         <div>
           <Hdr icon="⏰" title={tx(t.dailySched,lang)} accent={C.accent}/>
+          <div style={{background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 13px", marginBottom: 8, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"}}>
+            <span style={{fontSize: 20, flexShrink: 0}}>🎵</span>
+            <div style={{flex: 1, minWidth: 0}}>
+              {!autoplayFailed?(
+                <>
+                  <button id="play-podcast-btn" onClick={playPodcast} style={{padding:"8px 12px", borderRadius:8, border:"1px solid #d9c9a8", background:"#fffdf9", color:"#1c3d2a", fontSize:12, fontWeight:700, cursor:"pointer"}}>
+                    Play Daily Briefing
+                  </button>
+                </>
+              ):(
+                <button onClick={()=>{document.getElementById("podcast-player").play();setAutoplayFailed(false);}} style={{padding:"8px 12px", borderRadius:8, border:"1px solid #d9c9a8", background:"#fffdf9", color:"#1c3d2a", fontSize:12, fontWeight:700, cursor:"pointer"}}>
+                  ▶️ Play Daily Briefing
+                </button>
+              )}
+              <audio id="podcast-player" controls style={{width: "100%", marginTop: 8, display: "none"}}></audio>
+            </div>
+          </div>
           {dailyTasks.map((task,i)=>(
             <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:8,display:"flex",gap:10,alignItems:"flex-start",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
               <span style={{fontSize:20,flexShrink:0}}>{task.icon}</span>
@@ -872,20 +942,136 @@ function InventoryTab({inventory,setInventory,onLogout}){
   );
 }
 
+/* ─── ADMIN LOGIN ─── */
+function AdminLoginModal({onLogin,onCancel}){
+  const lang=useLang();
+  const [pw,setPw]=useState("");
+  const [err,setErr]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  const attempt=async()=>{
+    setLoading(true);
+    setErr("");
+    try{
+      const res=await fetch("/.netlify/functions/verify-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
+      const data=await res.json();
+      if(data.token){onLogin(data.token);}
+      else{setErr("Invalid admin password");}
+    }catch(e){setErr("Login failed");}
+    setLoading(false);
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"32px",maxWidth:320,width:"100%",boxShadow:"0 10px 40px rgba(0,0,0,0.1)"}}>
+        <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:4}}>🔐 Admin Access</div>
+        <div style={{fontSize:11,color:C.muted,marginBottom:20,lineHeight:1.5}}>Enter admin password to manage audio files and tasks</div>
+        <input type="password" placeholder="Admin Password" value={pw} onChange={(e)=>setPw(e.target.value)} onKeyPress={(e)=>e.key==="Enter"&&attempt()} style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,marginBottom:12,fontFamily:"inherit"}}/>
+        {err&&<div style={{fontSize:11,color:"#dc2626",marginBottom:12,background:"#fee2e2",padding:"8px",borderRadius:6}}>{err}</div>}
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={attempt} disabled={loading} style={{flex:1,padding:"10px",background:"#1c3d2a",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",opacity:loading?0.6:1}}>
+            {loading?"Verifying...":"Sign In"}
+          </button>
+          <button onClick={onCancel} style={{flex:1,padding:"10px",background:C.accentLight,color:C.accent,border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── AUDIO MANAGEMENT ─── */
+function AudioMgmtTab({tasks,setTasks,audioManifest,setAudioManifest,adminToken,onLogout}){
+  const lang=useLang();
+  const daysOfWeek=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const [generating,setGenerating]=useState(null);
+
+  const handleGenerate=async(type,day)=>{
+    setGenerating(`${type}-${day}`);
+    try{
+      const dayTasks=tasks[type]?.[day]||[];
+      let script=`HOST: ಇಂದಿನ ಕೃಷಿ ಕೆಲಸದ ನಿರ್ದೇಶನ\n`;
+      dayTasks.forEach(task=>{script+=`HOST: ${task.kn?.task||''}\nEXPERT: ${task.kn?.detail||''}\n`;});
+
+      const res=await fetch("/.netlify/functions/generate-audio",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({type,day,script})});
+      const data=await res.json();
+      if(data.success){
+        setAudioManifest(prev=>({...prev,[type]:{...prev[type],[day]:{generatedAt:new Date().toISOString(),url:data.url}}}));
+      }else{alert(`Error: ${data.error}`);}
+    }catch(e){alert(`Generation failed: ${e.message}`);}
+    setGenerating(null);
+  };
+
+  return(
+    <div className="fade-in">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <h2 style={{fontSize:16,fontWeight:700,color:C.text}}>🎵 Audio Management & Task Editor</h2>
+        <button onClick={onLogout} style={{padding:"6px 12px",fontSize:11,fontWeight:700,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",borderRadius:6,cursor:"pointer"}}>Logout</button>
+      </div>
+
+      <div style={{marginBottom:30}}>
+        <h3 style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:12}}>Daily Tasks</h3>
+        <div className="g2">
+          {daysOfWeek.map(day=>(
+            <AudioDayCard key={day} type="daily" day={day.toLowerCase()} tasks={tasks.daily?.[day.toLowerCase()]||[]} metadata={audioManifest.daily?.[day.toLowerCase()]} generating={generating===`daily-${day.toLowerCase()}`} onGenerate={()=>handleGenerate("daily",day.toLowerCase())}/>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:12}}>Weekly Tasks (Sunday)</h3>
+        <AudioDayCard type="weekly" day="sunday" tasks={tasks.weekly?.sunday||[]} metadata={audioManifest.weekly?.sunday} generating={generating==="weekly-sunday"} onGenerate={()=>handleGenerate("weekly","sunday")}/>
+      </div>
+    </div>
+  );
+}
+
+function AudioDayCard({type,day,tasks,metadata,generating,onGenerate}){
+  return(
+    <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontWeight:700,textTransform:"capitalize",fontSize:12,color:C.text}}>{day} {metadata?"✓":"◯"}</div>
+        {metadata&&<div style={{fontSize:10,color:C.muted}}>{new Date(metadata.generatedAt).toLocaleString()}</div>}
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={onGenerate} disabled={generating} style={{flex:1,padding:"8px",fontSize:11,fontWeight:700,background:generating?"#ccc":"#28a745",color:"white",border:"none",borderRadius:6,cursor:"pointer",opacity:generating?0.6:1}}>
+          {generating?"Generating...":"Generate"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── APP ─── */
 function App(){
   const [lang,setLang]=useState("en");
   const [tab,setTab]=useState("overview");
   const [loggedIn,setLoggedIn]=useState(false);
   const [showLogin,setShowLogin]=useState(false);
+  const [isAdmin,setIsAdmin]=useState(false);
+  const [showAdminLogin,setShowAdminLogin]=useState(false);
+  const [adminToken,setAdminToken]=useState(localStorage.getItem("adminToken")||null);
+  const [audioManifest,setAudioManifest]=useState({daily:{},weekly:{}});
+  const [tasks,setTasks]=useState({daily:{},weekly:{}});
   const wdi=new Date().getDay();
   const [day,setDay]=useState(weekDaysEn[wdi===0?6:wdi-1]);
   const [inventory,setInventory]=useState(initialInventory);
   const lowStock=inventory.filter(i=>i.stock<=i.min);
 
-  const goToTab=(id)=>{if(id==="inventory"&&!loggedIn){setShowLogin(true);}else{setTab(id);setShowLogin(false);}};
+  const goToTab=(id)=>{
+    if(id==="inventory"&&!loggedIn){setShowLogin(true);}
+    else if(id==="audio-mgmt"&&!isAdmin){setShowAdminLogin(true);}
+    else{setTab(id);setShowLogin(false);setShowAdminLogin(false);}
+  };
   const handleLogin=()=>{setLoggedIn(true);setShowLogin(false);setTab("inventory");};
   const handleLogout=()=>{setLoggedIn(false);setTab("overview");};
+  const handleAdminLogout=()=>{setIsAdmin(false);localStorage.removeItem("adminToken");setAdminToken(null);setTab("overview");};
+
+  React.useEffect(()=>{
+    fetch("/.netlify/functions/get-manifest").then(r=>r.json()).then(manifest=>setAudioManifest(manifest)).catch(err=>console.log("Failed to fetch manifest:",err));
+    fetch("/.netlify/functions/get-tasks").then(r=>r.json()).then(tasks=>setTasks(tasks)).catch(err=>console.log("Failed to fetch tasks:",err));
+  },[]);
 
   const fontClass=lang==="kn"?"kn":"";
 
@@ -895,9 +1081,11 @@ function App(){
     {id:"custardapple",en:"🍈 Custard Apple",kn:"🍈 ಸೀತಾಫಲ"},
     {id:"guava",       en:"🍃 Guava",    kn:"🍃 ಸೀಬೆ"},
     {id:"inventory",   en:"📦 Inventory",kn:"📦 ದಾಸ್ತಾನು"},
+    ...(isAdmin?[{id:"audio-mgmt",en:"🎵 Audio Mgmt",kn:"🎵 ಆಡಿಯೋ"}]:[]),
   ];
 
   if(showLogin) return <LangCtx.Provider value={lang}><div className={fontClass}><LoginScreen onLogin={handleLogin} onCancel={()=>setShowLogin(false)}/></div></LangCtx.Provider>;
+  if(showAdminLogin) return <LangCtx.Provider value={lang}><div className={fontClass}><AdminLoginModal onLogin={(token)=>{setAdminToken(token);localStorage.setItem("adminToken",token);setIsAdmin(true);setShowAdminLogin(false);}} onCancel={()=>setShowAdminLogin(false)}/></div></LangCtx.Provider>;
 
   return(
     <LangCtx.Provider value={lang}>
@@ -935,11 +1123,12 @@ function App(){
 
         {/* CONTENT */}
         <main style={{padding:"16px 18px",maxWidth:1100,margin:"0 auto"}}>
-          {tab==="overview"     &&<OverviewTab     day={day} setDay={setDay}/>}
+          {tab==="overview"     &&<OverviewTab     day={day} setDay={setDay} audioManifest={audioManifest} isAdmin={isAdmin}/>}
           {tab==="avocado"      &&<AvocadoTab/>}
           {tab==="custardapple" &&<CustardAppleTab/>}
           {tab==="guava"        &&<GuavaTab/>}
           {tab==="inventory"    &&<InventoryTab    inventory={inventory} setInventory={setInventory} onLogout={handleLogout}/>}
+          {tab==="audio-mgmt"   &&<AudioMgmtTab    tasks={tasks} setTasks={setTasks} audioManifest={audioManifest} setAudioManifest={setAudioManifest} adminToken={adminToken} onLogout={handleAdminLogout}/>}
         </main>
       </div>
     </LangCtx.Provider>
