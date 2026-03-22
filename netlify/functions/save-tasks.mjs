@@ -1,14 +1,20 @@
-const headers = {
+const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json'
 };
 
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: corsHeaders
+  });
+}
+
 async function commitToGitHub(filePath, fileContent, message) {
   const [owner, repo] = process.env.GITHUB_REPO.split('/');
   const branch = 'main';
 
-  // Get current file SHA if it exists
   let sha = null;
   try {
     const getRes = await fetch(
@@ -28,10 +34,8 @@ async function commitToGitHub(filePath, fileContent, message) {
     console.log('File does not exist yet');
   }
 
-  // Encode content to base64
   const encodedContent = Buffer.from(fileContent).toString('base64');
 
-  // Commit to GitHub
   const commitRes = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
     {
@@ -42,9 +46,9 @@ async function commitToGitHub(filePath, fileContent, message) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        message: message,
+        message,
         content: encodedContent,
-        branch: branch,
+        branch,
         ...(sha && { sha })
       })
     }
@@ -60,28 +64,27 @@ async function commitToGitHub(filePath, fileContent, message) {
 
 export default async (req, context) => {
   if (req.method === 'OPTIONS') {
-    return { statusCode: 200, headers };
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    // Verify admin token
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.get('authorization')?.split(' ')[1];
     if (token !== process.env.ADMIN_PASSWORD) {
-      return { statusCode: 403, body: JSON.stringify({ error: 'Unauthorized' }), headers };
+      return json({ error: 'Unauthorized' }, 403);
     }
 
-    const tasks = JSON.parse(req.body || '{}');
+    const body = await req.text();
+    const tasks = JSON.parse(body || '{}');
 
-    // Commit tasks.json to GitHub
     await commitToGitHub(
       'audio/tasks.json',
       JSON.stringify(tasks, null, 2),
       'Update task definitions'
     );
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }), headers };
+    return json({ success: true });
   } catch (error) {
     console.error('Error saving tasks:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }), headers };
+    return json({ error: error.message }, 500);
   }
 };

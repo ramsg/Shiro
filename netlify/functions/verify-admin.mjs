@@ -1,36 +1,31 @@
-const headers = {
+const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
   'Content-Type': 'application/json'
 };
 
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: corsHeaders
+  });
+}
+
 export default async (req, context) => {
   if (req.method === 'OPTIONS') {
-    return { statusCode: 200, headers };
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const { password } = JSON.parse(req.body || '{}');
+    const body = await req.text();
+    const { password } = JSON.parse(body || '{}');
 
     if (password === process.env.ADMIN_PASSWORD) {
-      // Create a simple token (for MVP, just use password again)
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ token: password }),
-        headers
-      };
+      return json({ token: password });
     }
 
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Invalid password' }),
-      headers
-    };
+    return json({ error: 'Invalid password' }, 401);
   } catch (error) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid request' }),
-      headers
-    };
+    return json({ error: 'Invalid request' }, 400);
   }
 };

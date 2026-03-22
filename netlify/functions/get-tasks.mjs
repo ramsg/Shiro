@@ -68,23 +68,18 @@ const DEFAULT_TASKS = {
   }
 };
 
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers
+  });
+}
+
 export default async (req, context) => {
   if (req.method === 'OPTIONS') {
-    return { statusCode: 200, headers };
+    return new Response(null, { status: 200, headers });
   }
 
-  try {
-    // Try to fetch from static /audio/tasks.json (served by Netlify)
-    const res = await fetch('https://' + req.headers.host + '/audio/tasks.json');
-
-    if (res.ok) {
-      const tasks = await res.json();
-      return { statusCode: 200, body: JSON.stringify(tasks), headers };
-    }
-  } catch (error) {
-    console.log('Tasks file not found, using defaults:', error.message);
-  }
-
-  // Return default tasks if file doesn't exist
-  return { statusCode: 200, body: JSON.stringify(DEFAULT_TASKS), headers };
+  // Return default tasks
+  return json(DEFAULT_TASKS);
 };
