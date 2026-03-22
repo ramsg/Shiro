@@ -1,0 +1,23 @@
+body{
+
+font-family:Arial;
+background:#f4f4f4;
+padding:40px;
+
+}
+
+textarea{
+
+width:700px;
+height:250px;
+font-size:16px;
+
+}
+
+button{
+
+padding:10px 20px;
+font-size:16px;
+margin-top:10px;
+
+}
