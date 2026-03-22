@@ -1,4 +1,10 @@
 {
   "daily": {},
-  "weekly": {}
+  "weekly": {
+    "sunday": {
+      "generatedAt": "2026-03-22T13:58:43.860Z",
+      "url": "/audio/weekly/sunday.mp3",
+      "size": 911232
+    }
+  }
 }
