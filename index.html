@@ -367,67 +367,150 @@ function LoginScreen({onLogin,onCancel}){
 }
 
 /* ─── OVERVIEW ─── */
+const WMO_ICON={0:"☀️",1:"🌤️",2:"⛅",3:"🌥️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"❄️",73:"❄️",75:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️"};
+const WMO_LABEL={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Showers",81:"Rain showers",82:"Heavy showers",95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm"};
+
 function OverviewTab({day,setDay,audioManifest,isAdmin}){
   const lang=useLang();
   const wdays=lang==="kn"?weekDaysKn:weekDaysEn;
-  const wdayKeys=weekDaysEn;
   const [openMonth,setOpenMonth]=useState("April");
   const [autoplayFailed,setAutoplayFailed]=useState(false);
+  const [weather,setWeather]=useState(null);
+  const todayName=new Date().toLocaleDateString("en-US",{weekday:"long"});
+  const todayKey=todayName; // e.g. "Sunday"
   const curMonthEn=new Date().toLocaleString("default",{month:"long"});
+  const dateStr=new Date().toLocaleDateString(lang==="kn"?"kn-IN":"en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 
+  const [location,setLocation]=useState(null);
+
+  // Fetch weather + rain probability + location (all free, no key)
+  React.useEffect(()=>{
+    const fetchAll=(lat,lon)=>{
+      // Weather + daily rain probability from Open-Meteo
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&daily=precipitation_probability_max&timezone=Asia%2FKolkata`)
+        .then(r=>r.json()).then(d=>{
+          if(d.current){
+            const rainPct=d.daily?.precipitation_probability_max?.[0]??null;
+            setWeather({...d.current, rain_probability: rainPct});
+          }
+        }).catch(()=>{});
+      // Reverse geocode for location name (Nominatim, free)
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
+        .then(r=>r.json()).then(d=>{
+          const a=d.address||{};
+          const place=a.village||a.town||a.suburb||a.city||a.county||"";
+          const district=a.county||a.state_district||"";
+          setLocation(place&&district?`${place}, ${district}`:place||district||d.display_name?.split(",")[0]||"");
+        }).catch(()=>{});
+    };
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        p=>fetchAll(p.coords.latitude,p.coords.longitude),
+        ()=>fetchAll(13.29,77.54)
+      );
+    } else { fetchAll(13.29,77.54); }
+  },[]);
+
+  // Auto-play for farm worker (Kannada mode, not admin)
   React.useEffect(()=>{
     if(lang!=="kn"||isAdmin)return;
-    const today=new Date().toLocaleDateString("en-US",{weekday:"long"}).toLowerCase();
-    const isSunday=today==="sunday";
-    const audioType=isSunday?"weekly":"daily";
-    const audioDay=isSunday?"sunday":today;
-    const audioFile=isSunday?audioManifest.weekly?.[audioDay]:audioManifest.daily?.[audioDay];
-    if(!audioFile?.url)return;
-    const audioPlayer=document.getElementById("podcast-player")||{play:()=>Promise.reject()};
-    audioPlayer.src=audioFile.url;
-    audioPlayer.play?.().catch(()=>{setAutoplayFailed(true);});
-  },[lang,isAdmin,audioManifest]);
+    const selectedDay=day.toLowerCase();
+    const isSun=day==="Sunday";
+    const audioFile=isSun?audioManifest.weekly?.sunday:audioManifest.daily?.[selectedDay];
+    const src=audioFile?.blobUrl||audioFile?.url||null;
+    if(!src)return;
+    const player=document.getElementById("podcast-player")||{play:()=>Promise.reject()};
+    player.src=src;
+    player.play?.().catch(()=>setAutoplayFailed(true));
+  },[lang,isAdmin,audioManifest,day]);
 
-  const playPodcast = async () => {
-      const player = document.getElementById('podcast-player');
-      const button = document.getElementById('play-podcast-btn');
+  const [playState,setPlayState]=useState("idle"); // idle | loading | playing
 
-      button.textContent = 'Generating...';
-      button.disabled = true;
+  // Compute task audio src for selected day (used by button label + playPodcast)
+  const taskSrc=(()=>{
+    const isSun=day==="Sunday";
+    const af=isSun?audioManifest.weekly?.sunday:audioManifest.daily?.[day.toLowerCase()];
+    return af?.blobUrl||af?.url||null;
+  })();
 
-      const script = `HOST: ಇಂದಿನ ಕೃಷಿ ಕೆಲಸದ ನಿಮಿಷಾ. Today's farm tasks:\nHOST: 6:00–6:30 ನೀರಾವರಿ ತಪಾಸಣೆ. Irrigation check: verify drip lines, clean filters.\nEXPERT: 7:00–8:00 ಹವಾಮಾನ ಪರಿಶೀಲನೆ. Weather check: record temperature and humidity.\nHOST: 9:00–10:00 ದೃಶ್ಯ ಗಸ್ತು. Visual scouting: inspect trees for pests and disease.`;
+  const playPodcast=async()=>{
+    if(playState==="loading")return;
+    const player=document.getElementById('podcast-player');
 
-      try {
-        const res = await fetch("/.netlify/functions/generate-audio", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${adminToken||""}`
-          },
-          body: JSON.stringify({ type:"daily", day:new Date().toLocaleDateString("en-US",{weekday:"long"}).toLowerCase(), script })
-        });
+    setPlayState("loading");
+    player.style.display='block';
 
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
-          player.src = url;
-          player.style.display = 'block';
-          player.play();
-          button.style.display = 'none';
-        } else {
-          console.error("Failed to generate podcast");
-          button.textContent = 'Generation Failed. Retry?';
-          button.disabled = false;
-        }
-      } catch (error) {
-        console.error("Error generating podcast:", error);
-        button.textContent = 'Generation Failed. Retry?';
-        button.disabled = false;
+    try{
+      // Part 1: greeting + weather (always generated fresh)
+      const now=new Date();
+      const res=await fetch("/.netlify/functions/get-greeting",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          hour:now.getHours(),
+          temp:weather?.temperature_2m,
+          condition:weather?WMO_LABEL[weather.weather_code]:null,
+          humidity:weather?.relative_humidity_2m,
+          wind:weather?.wind_speed_10m,
+          dayName:day,
+          isSunday:day==="Sunday",
+          dateStr:new Date().toLocaleDateString("kn-IN",{day:"numeric",month:"long",year:"numeric"}),
+          rainProbability:weather?.rain_probability??null,
+          locationName:location||null
+        })
+      });
+      const data=await res.json();
+      if(!data.audioBase64) throw new Error(data.error||"Greeting failed");
+
+      const greetBytes=Uint8Array.from(atob(data.audioBase64),c=>c.charCodeAt(0));
+      const greetUrl=URL.createObjectURL(new Blob([greetBytes],{type:"audio/mpeg"}));
+
+      // Play greeting first, then task audio if available
+      player.src=greetUrl;
+      setPlayState("playing");
+      player.play().catch(e=>console.error(e));
+
+      if(taskSrc){
+        player.onended=()=>{
+          player.src=taskSrc;
+          player.play().catch(e=>console.error(e));
+          player.onended=()=>{ setPlayState("idle"); player.onended=null; };
+        };
+      } else {
+        player.onended=()=>{ setPlayState("idle"); player.onended=null; };
       }
-  }
+    }catch(e){
+      console.error(e);
+      setPlayState("idle");
+      alert("Playback failed: "+e.message);
+    }
+  };
 
   return(
     <div className="fade-in">
+
+      {/* ── Date + Weather header ── */}
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700,color:C.text}}>{dateStr}</div>
+          <div style={{fontSize:11,color:C.muted,marginTop:2}}>{lang==="kn"?"ಶಿರೋ ಫಾರ್ಮ್, ಕರ್ನಾಟಕ":"Shiro Farm, Karnataka"}</div>
+        </div>
+        {weather?(
+          <div style={{display:"flex",alignItems:"center",gap:10,background:C.accentLight,borderRadius:10,padding:"8px 12px"}}>
+            <div style={{fontSize:28,lineHeight:1}}>{WMO_ICON[weather.weather_code]||"🌡️"}</div>
+            <div>
+              <div style={{fontSize:18,fontWeight:800,color:C.accent,lineHeight:1}}>{Math.round(weather.temperature_2m)}°C</div>
+              <div style={{fontSize:10,color:C.muted,marginTop:2}}>{WMO_LABEL[weather.weather_code]||""}</div>
+              <div style={{fontSize:10,color:C.muted}}>💧{weather.relative_humidity_2m}% 💨{Math.round(weather.wind_speed_10m)}km/h {weather.rain_probability!==null?`🌧️${weather.rain_probability}%`:""}</div>
+          {location&&<div style={{fontSize:10,color:C.muted}}>📍{location}</div>}
+            </div>
+          </div>
+        ):(
+          <div style={{fontSize:11,color:C.muted}}>Loading weather…</div>
+        )}
+      </div>
+
+      {/* ── Farm stats ── */}
       <div className="g4">
         {[
           {icon:"🥑",label:t.avocadoLbl,val:"1,000",sub:t.avocadoSub,accent:"#2d6645"},
@@ -444,61 +527,74 @@ function OverviewTab({day,setDay,audioManifest,isAdmin}){
         ))}
       </div>
 
+      {/* ── Day selector tabs ── */}
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",margin:"14px 0 10px"}}>
+        {weekDaysEn.map((dk,i)=>{
+          const isToday=dk===todayKey;
+          const isSelected=dk===day;
+          return(
+            <button key={dk} onClick={()=>setDay(dk)} style={{padding:"6px 10px",borderRadius:20,fontSize:11,fontWeight:700,border:isToday?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer",background:isSelected?C.primary:"#e8dcc8",color:isSelected?"#fff":C.muted,transition:"all 0.15s",position:"relative"}}>
+              {wdays[i].slice(0,3)}
+              {isToday&&<span style={{position:"absolute",top:-4,right:-2,width:7,height:7,borderRadius:"50%",background:C.accent,border:"1px solid #fff"}}/>}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="g2a">
-        {/* Daily */}
+        {/* ── Daily tasks for selected day ── */}
         <div>
-          <Hdr icon="⏰" title={tx(t.dailySched,lang)} accent={C.accent}/>
-          <div style={{background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 13px", marginBottom: 8, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"}}>
-            <span style={{fontSize: 20, flexShrink: 0}}>🎵</span>
-            <div style={{flex: 1, minWidth: 0}}>
-              {!autoplayFailed?(
-                <>
-                  <button id="play-podcast-btn" onClick={playPodcast} style={{padding:"8px 12px", borderRadius:8, border:"1px solid #d9c9a8", background:"#fffdf9", color:"#1c3d2a", fontSize:12, fontWeight:700, cursor:"pointer"}}>
-                    Play Daily Briefing
-                  </button>
-                </>
-              ):(
-                <button onClick={()=>{document.getElementById("podcast-player").play();setAutoplayFailed(false);}} style={{padding:"8px 12px", borderRadius:8, border:"1px solid #d9c9a8", background:"#fffdf9", color:"#1c3d2a", fontSize:12, fontWeight:700, cursor:"pointer"}}>
-                  ▶️ Play Daily Briefing
-                </button>
-              )}
-              <audio id="podcast-player" controls style={{width: "100%", marginTop: 8, display: "none"}}></audio>
+          <Hdr icon="⏰" title={`${tx(t.dailySched,lang)} — ${lang==="kn"?wdays[weekDaysEn.indexOf(day)]:day}`} accent={C.accent}/>
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:8,display:"flex",gap:10,alignItems:"center",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+            <span style={{fontSize:20,flexShrink:0}}>🎵</span>
+            <div style={{flex:1,minWidth:0}}>
+              <button onClick={playPodcast} disabled={playState==="loading"} style={{padding:"8px 12px",borderRadius:8,border:"1px solid #d9c9a8",background:playState==="playing"?"#f0fdf4":"#fffdf9",color:"#1c3d2a",fontSize:12,fontWeight:700,cursor:playState==="loading"?"wait":"pointer",opacity:playState==="loading"?0.6:1}}>
+                {playState==="loading"?"⏳ Preparing...":playState==="playing"?"🔊 Playing...":(day==="Sunday"?"▶️ Play Weekly Briefing":"▶️ Play Daily Briefing")}
+              </button>
+              {!taskSrc&&playState==="idle"&&<div style={{fontSize:10,color:C.muted,marginTop:4}}>
+                {lang==="kn"?"(ಕಾರ್ಯ ಆಡಿಯೋ ಇಲ್ಲ — ಶುಭಾಶಯ ಮಾತ್ರ ಪ್ಲೇ ಆಗುತ್ತದೆ)":"(No task audio — will play greeting & weather only)"}
+              </div>}
+              <audio id="podcast-player" controls style={{width:"100%",marginTop:8,display:"none"}}></audio>
             </div>
           </div>
-          {dailyTasks.map((task,i)=>(
-            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:8,display:"flex",gap:10,alignItems:"flex-start",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-              <span style={{fontSize:20,flexShrink:0}}>{task.icon}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",justifyContent:"space-between",gap:6,alignItems:"flex-start",flexWrap:"wrap"}}>
-                  <div style={{fontWeight:700,fontSize:13,color:C.text}}>{task[lang]?.task||task.en.task}</div>
-                  <span style={{fontSize:10,color:C.accent,fontWeight:700,background:C.accentLight,padding:"1px 7px",borderRadius:20,flexShrink:0,whiteSpace:"nowrap"}}>{task.time}</span>
+          {day==="Sunday"?(
+            weeklySchedule[day]?(
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:8,display:"flex",gap:10,alignItems:"flex-start",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                <span style={{fontSize:20,flexShrink:0}}>{weeklySchedule[day].icon}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:4}}>{weeklySchedule[day][lang]?.task||weeklySchedule[day].en.task}</div>
+                  <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{weeklySchedule[day][lang]?.detail||weeklySchedule[day].en.detail}</div>
                 </div>
-                <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6,marginTop:3}}>{task[lang]?.detail||task.en.detail}</div>
               </div>
-            </div>
-          ))}
+            ):null
+          ):(
+            dailyTasks.map((task,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:8,display:"flex",gap:10,alignItems:"flex-start",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                <span style={{fontSize:20,flexShrink:0}}>{task.icon}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",justifyContent:"space-between",gap:6,alignItems:"flex-start",flexWrap:"wrap"}}>
+                    <div style={{fontWeight:700,fontSize:13,color:C.text}}>{task[lang]?.task||task.en.task}</div>
+                    <span style={{fontSize:10,color:C.accent,fontWeight:700,background:C.accentLight,padding:"1px 7px",borderRadius:20,flexShrink:0,whiteSpace:"nowrap"}}>{task.time}</span>
+                  </div>
+                  <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6,marginTop:3}}>{task[lang]?.detail||task.en.detail}</div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Weekly + Emergencies */}
+        {/* ── Weekly focus + Emergencies ── */}
         <div>
           <Hdr icon="📅" title={tx(t.weeklySched,lang)} accent={C.accent}/>
-          <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
-            {wdayKeys.map((dk,i)=>(
-              <button key={dk} onClick={()=>setDay(dk)} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,border:"none",cursor:"pointer",background:day===dk?C.primary:"#e8dcc8",color:day===dk?"#fff":C.muted,transition:"all 0.15s"}}>{wdays[i].slice(0,3)}</button>
-            ))}
-          </div>
-          {weeklySchedule[day]&&(()=>{
-            const w=weeklySchedule[day];
-            return(
-              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:12,display:"flex",gap:10}}>
-                <span style={{fontSize:20,flexShrink:0}}>{w.icon}</span>
-                <div>
-                  <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:4}}>{w[lang]?.task||w.en.task}</div>
-                  <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{w[lang]?.detail||w.en.detail}</div>
-                </div>
+          {weeklySchedule[day]&&day!=="Sunday"&&(
+            <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:12,display:"flex",gap:10}}>
+              <span style={{fontSize:20,flexShrink:0}}>{weeklySchedule[day].icon}</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:4}}>{weeklySchedule[day][lang]?.task||weeklySchedule[day].en.task}</div>
+                <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{weeklySchedule[day][lang]?.detail||weeklySchedule[day].en.detail}</div>
               </div>
-            );
-          })()}
+            </div>
+          )}
 
           <Hdr icon="🚨" title={tx(t.emergProto,lang)} accent="#dc2626"/>
           {emergencies.map((e,i)=>(
@@ -991,20 +1087,29 @@ function AdminLoginModal({onLogin,onCancel}){
 /* ─── AUDIO MANAGEMENT ─── */
 function AudioMgmtTab({tasks,setTasks,audioManifest,setAudioManifest,adminToken,onLogout}){
   const lang=useLang();
-  const daysOfWeek=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const allDays=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const todayIdx=new Date().getDay(); // 0=Sun,1=Mon,...6=Sat
+  const isSunday=todayIdx===0;
+  const todayName=isSunday?null:allDays[todayIdx-1]; // null if Sunday
+  const orderedDays=[...allDays.slice(isSunday?0:todayIdx-1), ...allDays.slice(0,isSunday?0:todayIdx-1)];
   const [generating,setGenerating]=useState(null);
 
   const handleGenerate=async(type,day)=>{
     setGenerating(`${type}-${day}`);
     try{
       const dayTasks=tasks[type]?.[day]||[];
-      let script=`HOST: ಇಂದಿನ ಕೃಷಿ ಕೆಲಸದ ನಿರ್ದೇಶನ\n`;
-      dayTasks.forEach(task=>{script+=`HOST: ${task.kn?.task||''}\nEXPERT: ${task.kn?.detail||''}\n`;});
+      const script=buildScript(dayTasks);
 
       const res=await fetch("/.netlify/functions/generate-audio",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({type,day,script})});
       const data=await res.json();
       if(data.success){
-        setAudioManifest(prev=>({...prev,[type]:{...prev[type],[day]:{generatedAt:new Date().toISOString(),url:data.url}}}));
+        // Create blob URL from base64 for immediate local preview
+        let blobUrl=null;
+        if(data.audioBase64){
+          const bytes=Uint8Array.from(atob(data.audioBase64),c=>c.charCodeAt(0));
+          blobUrl=URL.createObjectURL(new Blob([bytes],{type:"audio/mpeg"}));
+        }
+        setAudioManifest(prev=>({...prev,[type]:{...prev[type],[day]:{generatedAt:new Date().toISOString(),url:data.url,blobUrl}}}));
       }else{alert(`Error: ${data.error}`);}
     }catch(e){alert(`Generation failed: ${e.message}`);}
     setGenerating(null);
@@ -1017,30 +1122,113 @@ function AudioMgmtTab({tasks,setTasks,audioManifest,setAudioManifest,adminToken,
         <button onClick={onLogout} style={{padding:"6px 12px",fontSize:11,fontWeight:700,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",borderRadius:6,cursor:"pointer"}}>Logout</button>
       </div>
 
-      <div style={{marginBottom:30}}>
-        <h3 style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:12}}>Daily Tasks</h3>
-        <div className="g2">
-          {daysOfWeek.map(day=>(
-            <AudioDayCard key={day} type="daily" day={day.toLowerCase()} tasks={tasks.daily?.[day.toLowerCase()]||[]} metadata={audioManifest.daily?.[day.toLowerCase()]} generating={generating===`daily-${day.toLowerCase()}`} onGenerate={()=>handleGenerate("daily",day.toLowerCase())}/>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h3 style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:12}}>Weekly Tasks (Sunday)</h3>
-        <AudioDayCard type="weekly" day="sunday" tasks={tasks.weekly?.sunday||[]} metadata={audioManifest.weekly?.sunday} generating={generating==="weekly-sunday"} onGenerate={()=>handleGenerate("weekly","sunday")}/>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {isSunday&&(
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>📅 Today — Weekly Tasks</div>
+            <AudioDayCard type="weekly" day="sunday" tasks={tasks.weekly?.sunday||[]} onTasksChange={updated=>setTasks(prev=>({...prev,weekly:{...prev.weekly,sunday:updated}}))} metadata={audioManifest.weekly?.sunday} generating={generating==="weekly-sunday"} onGenerate={()=>handleGenerate("weekly","sunday")}/>
+          </div>
+        )}
+        {orderedDays.map((d,i)=>{
+          const dk=d.toLowerCase();
+          const isToday=!isSunday&&i===0;
+          const isNext=!isSunday&&i===1;
+          return(
+            <div key={d}>
+              {isToday&&<div style={{fontSize:10,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>📅 Today</div>}
+              {isNext&&<div style={{fontSize:10,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Tomorrow</div>}
+              {i===2&&<div style={{fontSize:10,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4,marginTop:4}}>Rest of Week</div>}
+              <AudioDayCard type="daily" day={dk} tasks={tasks.daily?.[dk]||[]} onTasksChange={updated=>setTasks(prev=>({...prev,daily:{...prev.daily,[dk]:updated}}))} metadata={audioManifest.daily?.[dk]} generating={generating===`daily-${dk}`} onGenerate={()=>handleGenerate("daily",dk)}/>
+            </div>
+          );
+        })}
+        {!isSunday&&(
+          <div style={{marginTop:4}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>🗓 Sunday — Weekly Tasks</div>
+            <AudioDayCard type="weekly" day="sunday" tasks={tasks.weekly?.sunday||[]} onTasksChange={updated=>setTasks(prev=>({...prev,weekly:{...prev.weekly,sunday:updated}}))} metadata={audioManifest.weekly?.sunday} generating={generating==="weekly-sunday"} onGenerate={()=>handleGenerate("weekly","sunday")}/>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function AudioDayCard({type,day,tasks,metadata,generating,onGenerate}){
+function buildScript(tasks){
+  let s=`ಇಂದಿನ ಕೃಷಿ ಕೆಲಸದ ನಿರ್ದೇಶನ.\n`;
+  (tasks||[]).forEach((task,i)=>{s+=`${i+1}. ${task.kn?.task||''}. ${task.kn?.detail||''}\n`;});
+  return s;
+}
+
+async function translateToKannada(text){
+  try{
+    const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|kn`);
+    const data=await res.json();
+    return data.responseData?.translatedText||text;
+  }catch(e){return text;}
+}
+
+function TaskEditor({tasks, onTasksChange}){
+  const [translating,setTranslating]=useState({});
+  const timers=React.useRef({});
+
+  const update=(idx,field,subfield,val)=>{
+    const updated=tasks.map((t,i)=>i!==idx?t:{...t,[field]:{...t[field],[subfield]:val}});
+    onTasksChange(updated);
+    // Auto-translate English changes to Kannada with debounce
+    if(field==="en"){
+      const key=`${idx}-${subfield}`;
+      clearTimeout(timers.current[key]);
+      setTranslating(p=>({...p,[key]:true}));
+      timers.current[key]=setTimeout(async()=>{
+        const kn=await translateToKannada(val);
+        onTasksChange(prev=>prev.map((t,i)=>i!==idx?t:{...t,kn:{...t.kn,[subfield]:kn}}));
+        setTranslating(p=>({...p,[key]:false}));
+      },800);
+    }
+  };
+
+  return(
+    <div style={{marginTop:8}}>
+      {(tasks||[]).map((task,idx)=>(
+        <div key={idx} style={{marginBottom:10,background:"#fafaf7",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.accent,marginBottom:6}}>{task.icon} {task.time}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            <div>
+              <div style={{fontSize:9,fontWeight:700,color:"#666",marginBottom:3}}>ENGLISH</div>
+              <input value={task.en?.task||''} onChange={e=>update(idx,"en","task",e.target.value)}
+                style={{width:"100%",fontSize:10,padding:"4px 6px",border:`1px solid ${C.border}`,borderRadius:4,marginBottom:4,fontFamily:"inherit"}}/>
+              <textarea value={task.en?.detail||''} onChange={e=>update(idx,"en","detail",e.target.value)} rows={2}
+                style={{width:"100%",fontSize:10,padding:"4px 6px",border:`1px solid ${C.border}`,borderRadius:4,resize:"vertical",fontFamily:"inherit"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:9,fontWeight:700,color:"#166534",marginBottom:3}}>
+                ಕನ್ನಡ {(translating[`${idx}-task`]||translating[`${idx}-detail`])&&<span style={{color:"#f59e0b"}}>↻</span>}
+              </div>
+              <input value={task.kn?.task||''} onChange={e=>update(idx,"kn","task",e.target.value)}
+                style={{width:"100%",fontSize:10,padding:"4px 6px",border:`1px solid #bbf7d0`,borderRadius:4,marginBottom:4,fontFamily:"'Noto Sans Kannada',sans-serif"}}/>
+              <textarea value={task.kn?.detail||''} onChange={e=>update(idx,"kn","detail",e.target.value)} rows={2}
+                style={{width:"100%",fontSize:10,padding:"4px 6px",border:`1px solid #bbf7d0`,borderRadius:4,resize:"vertical",fontFamily:"'Noto Sans Kannada',sans-serif"}}/>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AudioDayCard({type,day,tasks,onTasksChange,metadata,generating,onGenerate}){
   const [playing,setPlaying]=useState(false);
   const [audioError,setAudioError]=useState(null);
+  const [showScript,setShowScript]=useState(false);
   const audioRef=React.useRef(null);
 
+  const script=buildScript(tasks);
+
+  // Use blob URL (immediate, works locally) or fall back to static file URL
+  const previewSrc=metadata?.blobUrl||metadata?.url||null;
+
   const handlePlay=()=>{
-    if(!metadata?.url)return;
+    if(!previewSrc)return;
     if(audioRef.current){
       if(playing){
         audioRef.current.pause();
@@ -1064,7 +1252,7 @@ function AudioDayCard({type,day,tasks,metadata,generating,onGenerate}){
 
       {metadata&&(
         <div style={{marginBottom:8}}>
-          <audio ref={audioRef} src={metadata.url} onEnded={()=>setPlaying(false)} onError={()=>setAudioError("Audio file not found")} style={{display:"none"}}/>
+          <audio ref={audioRef} src={previewSrc} onEnded={()=>setPlaying(false)} onError={()=>setAudioError("Audio file not found")} style={{display:"none"}}/>
           <div style={{display:"flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"6px 8px"}}>
             <button onClick={handlePlay} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}>
               {playing?"⏹":"▶️"}
@@ -1077,6 +1265,21 @@ function AudioDayCard({type,day,tasks,metadata,generating,onGenerate}){
           {audioError&&<div style={{fontSize:10,color:"#dc2626",marginTop:4,background:"#fee2e2",padding:"4px 6px",borderRadius:4}}>{audioError}</div>}
         </div>
       )}
+
+      <div style={{marginBottom:8}}>
+        <button onClick={()=>setShowScript(s=>!s)} style={{background:"none",border:"none",padding:0,fontSize:10,color:C.accent,cursor:"pointer",fontWeight:600}}>
+          {showScript?"▲ Hide editor":"▼ Edit & preview script"}
+        </button>
+        {showScript&&(
+          <>
+            <TaskEditor tasks={tasks} onTasksChange={onTasksChange}/>
+            <div style={{marginTop:8,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,padding:"8px",fontSize:10,color:"#166534",lineHeight:1.8,whiteSpace:"pre-wrap",fontFamily:"'Noto Sans Kannada',sans-serif",maxHeight:140,overflowY:"auto"}}>
+              <div style={{fontSize:9,fontWeight:700,marginBottom:4,color:"#4ade80"}}>AUDIO SCRIPT PREVIEW</div>
+              {script}
+            </div>
+          </>
+        )}
+      </div>
 
       <div style={{display:"flex",gap:6}}>
         <button onClick={onGenerate} disabled={generating} style={{flex:1,padding:"8px",fontSize:11,fontWeight:700,background:generating?"#ccc":metadata?"#2563eb":"#28a745",color:"white",border:"none",borderRadius:6,cursor:"pointer",opacity:generating?0.6:1}}>
@@ -1125,7 +1328,7 @@ function App(){
     {id:"custardapple",en:"🍈 Custard Apple",kn:"🍈 ಸೀತಾಫಲ"},
     {id:"guava",       en:"🍃 Guava",    kn:"🍃 ಸೀಬೆ"},
     {id:"inventory",   en:"📦 Inventory",kn:"📦 ದಾಸ್ತಾನು"},
-    ...(isAdmin?[{id:"audio-mgmt",en:"🎵 Audio Mgmt",kn:"🎵 ಆಡಿಯೋ"}]:[]),
+    {id:"audio-mgmt",en:`${isAdmin?"🎵":"🔒"} Audio`,kn:`${isAdmin?"🎵":"🔒"} ಆಡಿಯೋ`},
   ];
 
   if(showLogin) return <LangCtx.Provider value={lang}><div className={fontClass}><LoginScreen onLogin={handleLogin} onCancel={()=>setShowLogin(false)}/></div></LangCtx.Provider>;
