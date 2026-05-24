@@ -327,7 +327,7 @@ function LoginScreen({onLogin,onCancel}){
     if(!uid.trim()||!pw){setErr("Please enter username and password");shake(true);setTimeout(()=>shake(false),500);return;}
     setLoading(true);
     try{
-      const res=await fetch("/.netlify/functions/verify-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
+      const res=await fetch("/api/verify-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
       const data=await res.json();
       if(data.token&&uid.trim()==="ramesh"){onLogin();}
       else{setErr(tx(t.loginErr,lang));shake(true);setTimeout(()=>shake(false),500);}
@@ -443,7 +443,7 @@ function OverviewTab({day,setDay,audioManifest,isAdmin}){
     try{
       // Part 1: greeting + weather (always generated fresh)
       const now=new Date();
-      const res=await fetch("/.netlify/functions/get-greeting",{
+      const res=await fetch("/api/get-greeting",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
@@ -1056,7 +1056,7 @@ function AdminLoginModal({onLogin,onCancel}){
     setLoading(true);
     setErr("");
     try{
-      const res=await fetch("/.netlify/functions/verify-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
+      const res=await fetch("/api/verify-admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
       const data=await res.json();
       if(data.token){onLogin(data.token);}
       else{setErr("Invalid admin password");}
@@ -1100,7 +1100,7 @@ function AudioMgmtTab({tasks,setTasks,audioManifest,setAudioManifest,adminToken,
       const dayTasks=tasks[type]?.[day]||[];
       const script=buildScript(dayTasks);
 
-      const res=await fetch("/.netlify/functions/generate-audio",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({type,day,script})});
+      const res=await fetch("/api/generate-audio",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({type,day,script})});
       const data=await res.json();
       if(data.success){
         // Create blob URL from base64 for immediate local preview
@@ -1316,8 +1316,8 @@ function App(){
   const handleAdminLogout=()=>{setIsAdmin(false);localStorage.removeItem("adminToken");setAdminToken(null);setTab("overview");};
 
   React.useEffect(()=>{
-    fetch("/.netlify/functions/get-manifest").then(r=>r.json()).then(manifest=>setAudioManifest(manifest)).catch(err=>console.log("Failed to fetch manifest:",err));
-    fetch("/.netlify/functions/get-tasks").then(r=>r.json()).then(tasks=>setTasks(tasks)).catch(err=>console.log("Failed to fetch tasks:",err));
+    fetch("/api/get-manifest").then(r=>r.json()).then(manifest=>setAudioManifest(manifest)).catch(err=>console.log("Failed to fetch manifest:",err));
+    fetch("/api/get-tasks").then(r=>r.json()).then(tasks=>setTasks(tasks)).catch(err=>console.log("Failed to fetch tasks:",err));
   },[]);
 
   const fontClass=lang==="kn"?"kn":"";
