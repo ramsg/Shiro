@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Kolar Farm — tizisit.com</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700;9..40,800&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:#f4ede2;-webkit-tap-highlight-color:transparent}
+.kn{font-family:'Noto Sans Kannada',sans-serif!important}
+.kn *{font-family:'Noto Sans Kannada',sans-serif!important}
+#root{min-height:100vh}
+button,input{font-family:inherit}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#e8d8c0}
+::-webkit-scrollbar-thumb{background:#c17f3a;border-radius:3px}
+table{border-collapse:collapse;width:100%}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.25s ease forwards}
+/* Grid system */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g2a{display:grid;grid-template-columns:1.05fr 1fr;gap:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+/* Mobile overrides */
+@media(max-width:860px){
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g2a{grid-template-columns:1fr}
+  .g3{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:540px){
+  .g4{grid-template-columns:repeat(2,1fr);gap:8px}
+  .g2{grid-template-columns:1fr}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  main{padding:12px 11px!important}
+  .hdr-sub{display:none!important}
+  .tab-btn{padding:9px 10px!important;font-size:11px!important}
+}
+@media(max-width:380px){
+  .g3{grid-template-columns:1fr}
+}
+/* Lang toggle pill */
+.lang-btn{display:flex;align-items:center;gap:0;border-radius:20px;overflow:hidden;border:1.5px solid rgba(255,255,255,0.25)}
+.lang-btn button{padding:4px 11px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:all 0.2s;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, createContext, useContext } = React;
+
+/* ─── LANG CONTEXT ─── */
+const LangCtx = createContext("en");
+const useLang = () => useContext(LangCtx);
+const T = (en, kn) => ({ en, kn });
+
+/* ─── TRANSLATIONS ─── */
+const t = {
+  /* Header */
+  farmTitle:    T("Kolar Farm — Mixed Orchard", "ಕೋಲಾರ್ ಫಾರ್ಮ್ — ಮಿಶ್ರ ತೋಟ"),
+  farmSub:      T("Bangapet, Kolar · 5 Acres · 2,400 Trees · Apr 2026–Mar 2027","ಬಂಗಾರಪೇಟೆ, ಕೋಲಾರ · 5 ಎಕರೆ · 2,400 ಮರಗಳು · ಏಪ್ರಿಲ್ 2026–ಮಾರ್ಚ್ 2027"),
+  lowStock:     T("Low Stock","ಕಡಿಮೆ ಸ್ಟಾಕ್"),
+  /* Tabs */
+  tabOverview:  T("🏡 Overview","🏡 ಸಾರಾಂಶ"),
+  tabAvocado:   T("🥑 Avocado","🥑 ಅವಕಾಡೋ"),
+  tabCA:        T("🍈 Custard Apple","🍈 ಸೀತಾಫಲ"),
+  tabGuava:     T("🍃 Guava","🍃 ಸೀಬೆ"),
+  tabInventory: T("📦 Inventory","📦 ದಾಸ್ತಾನು"),
+  /* Login */
+  loginTitle:   T("Sign in to manage inventory","ದಾಸ್ತಾನು ನಿರ್ವಹಿಸಲು ಸೈನ್ ಇನ್ ಮಾಡಿ"),
+  loginSub:     T("Inventory — Authorised Access Only","ದಾಸ್ತಾನು — ಅಧಿಕೃತ ಪ್ರವೇಶ ಮಾತ್ರ"),
+  loginUser:    T("Username","ಬಳಕೆದಾರ ಹೆಸರು"),
+  loginPass:    T("Password","ಪಾಸ್‌ವರ್ಡ್"),
+  loginBtn:     T("Sign In →","ಸೈನ್ ಇನ್ →"),
+  loginBack:    T("← Back to Dashboard","← ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ"),
+  loginErr:     T("Incorrect username or password.","ತಪ್ಪಾದ ಬಳಕೆದಾರ ಹೆಸರು ಅಥವಾ ಪಾಸ್‌ವರ್ಡ್."),
+  loginRestrict:T("🔒 Inventory access restricted to authorised users","🔒 ದಾಸ್ತಾನು ಪ್ರವೇಶ ಅಧಿಕೃತ ಬಳಕೆದಾರರಿಗೆ ಮಾತ್ರ"),
+  signOut:      T("🔒 Sign Out","🔒 ಸೈನ್ ಔಟ್"),
+  /* Overview headings */
+  dailySched:   T("Daily Farm Schedule","ದಿನದ ತೋಟ ಕಾರ್ಯಕ್ರಮ"),
+  weeklySched:  T("Weekly Task Schedule","ವಾರದ ಕಾರ್ಯ ಪಟ್ಟಿ"),
+  monthlyCalHdr:T("Monthly Calendar — Apr 2026 to Mar 2027","ಮಾಸಿಕ ಕ್ಯಾಲೆಂಡರ್ — ಏಪ್ರಿಲ್ 2026 ರಿಂದ ಮಾರ್ಚ್ 2027"),
+  emergProto:   T("Emergency Protocols","ತುರ್ತು ಪ್ರೋಟೋಕಾಲ್"),
+  tasks:        T("tasks","ಕಾರ್ಯಗಳು"),
+  now:          T("NOW","ಈಗ"),
+  /* Stat cards */
+  avocadoLbl:   T("Avocado","ಅವಕಾಡೋ"),
+  avocadoSub:   T("Hass 30% · Lamb Hass 50% · Ettinger 20%","ಹಾಸ್ 30% · ಲ್ಯಾಂಬ್ ಹಾಸ್ 50% · ಎಟ್ಟಿಂಗರ್ 20%"),
+  caLbl:        T("Custard Apple","ಸೀತಾಫಲ"),
+  caSub:        T("NMK Gold · ~16 months · 8×16 ft","NMK ಗೋಲ್ಡ್ · ~16 ತಿಂಗಳು · 8×16 ಅಡಿ"),
+  guavaLbl:     T("Guava","ಸೀಬೆ"),
+  guavaSub:     T("Japanese Red · Intercrop · ~6 months","ಜಪಾನೀ ರೆಡ್ · ಅಂತರ ಬೆಳೆ · ~6 ತಿಂಗಳು"),
+  farmLbl:      T("Kolar Farm","ಕೋಲಾರ್ ಫಾರ್ಮ್"),
+  farmSub2:     T("Bangapet · High-pH Saline Mgmt","ಬಂಗಾರಪೇಟೆ · ಅಧಿಕ pH ಲವಣ ನಿರ್ವಹಣೆ"),
+  /* Avocado tab */
+  avoInfo:      T("Hass 30% · Lamb Hass 50% · Ettinger 20% · Rootstock: Degania 169 · Year 2 Goal: Root + scaffold — NO fruiting","ಹಾಸ್ 30% · ಲ್ಯಾಂಬ್ ಹಾಸ್ 50% · ಎಟ್ಟಿಂಗರ್ 20% · ರೂಟ್‌ಸ್ಟಾಕ್: ಡೆಗಾನಿಯಾ 169 · ವರ್ಷ 2 ಗುರಿ: ಬೇರು + ಸ್ಕ್ಯಾಫೋಲ್ಡ್ — ಫಲ ಬೇಡ"),
+  avoSpacing:   T("Spacing: 8×16 ft · Height: ~4 ft","ಅಂತರ: 8×16 ಅಡಿ · ಎತ್ತರ: ~4 ಅಡಿ"),
+  avoEmitter:   T("Emitter: 8 LPH · 2hr: 16L/tree","ಎಮಿಟರ್: 8 LPH · 2 ಗಂಟೆ: 16L/ಮರ"),
+  fertiHdr:     T("Seasonal Fertigation Program (rates per avocado tree)","ಋತುಮಾನ ಫೆರ್ಟಿಗೇಷನ್ ಕಾರ್ಯಕ್ರಮ (ಪ್ರತಿ ಅವಕಾಡೋ ಮರಕ್ಕೆ ಪ್ರಮಾಣ)"),
+  microHdr:     T("Micronutrient Protocol — Soil/Drip Only (NOT Foliar)","ಸೂಕ್ಷ್ಮ ಪೋಷಕಾಂಶ — ಮಣ್ಣು/ಡ್ರಿಪ್ ಮಾತ್ರ (ಎಲೆ ಸಿಂಪಡಣೆ ಬೇಡ)"),
+  microWarning: T("Avocado foliar is ineffective — dense wax + zero stomates. All micronutrients must be soil-applied.","ಅವಕಾಡೋ ಎಲೆ ಸಿಂಪಡಣೆ ನಿಷ್ಪ್ರಭಾವ — ದಟ್ಟ ಮೇಣ + ಶೂನ್ಯ ರಂಧ್ರಗಳು. ಎಲ್ಲಾ ಸೂಕ್ಷ್ಮ ಪೋಷಕಾಂಶ ಮಣ್ಣಿನಲ್ಲಿ ಹಾಕಬೇಕು."),
+  phytoHdr:     T("Phytophthora Rotation Program","ಫೈಟೋಫ್ಥೋರಾ ರೊಟೇಷನ್ ಕಾರ್ಯಕ್ರಮ"),
+  pruneHdr:     T("Pruning & Canopy (Year 2)","ಕತ್ತರಿಸುವಿಕೆ ಮತ್ತು ಕ್ಯಾನಪಿ (ವರ್ಷ 2)"),
+  mealyHdr:     T("Mealybug Control (Escalation Ladder)","ಮೀಲಿಬಗ್ ನಿಯಂತ್ರಣ (ಹೆಜ್ಜೆ ಕ್ರಮ)"),
+  alertsHdr:    T("Critical Avocado Alerts","ನಿರ್ಣಾಯಕ ಅವಕಾಡೋ ಎಚ್ಚರಿಕೆಗಳು"),
+  doRemove:     T("DO: Remove","ತೆಗೆಯಬೇಕು"),
+  doNotRemove:  T("DO NOT: Remove","ತೆಗೆಯಬಾರದು"),
+  doRemoveList: T("Water sprouts · Suckers · Narrow crotch branches (<45°) · ALL premature flower buds","ವಾಟರ್ ಸ್ಪ್ರೌಟ್ಸ್ · ಕೂಸಿನ ಚಿಗುರು · ಕಿರಿದಾದ ಕವಲು ಕೊಂಬೆ (<45°) · ಎಲ್ಲಾ ಮೊಗ್ಗುಗಳು"),
+  doNotList:    T("Lower skirting branches — protect bark · Any wide crotch angle branch","ಕೆಳ ಟ್ರಂಕ್ ಕೊಂಬೆಗಳು — ತೊಗಟೆ ರಕ್ಷಣೆ · ಅಗಲ ಕೋನದ ಕೊಂಬೆ"),
+  /* Custard Apple tab */
+  caInfo:       T("NMK Gold variety · Seedling rootstock · ~16 months · ~3.5 ft · 8×16 ft spacing · Year 2: Open-center vase framework","NMK ಗೋಲ್ಡ್ ತಳಿ · ಬೀಜ ರೂಟ್‌ಸ್ಟಾಕ್ · ~16 ತಿಂಗಳು · ~3.5 ಅಡಿ · 8×16 ಅಡಿ · ವರ್ಷ 2: ತೆರೆದ ವೇಸ್"),
+  caFertiHdr:   T("Fertigation — Supplement Program","ಫೆರ್ಟಿಗೇಷನ್ — ಹೆಚ್ಚುವರಿ ಕಾರ್ಯಕ್ರಮ"),
+  caFertiBase:  T("Avocado drip baseline carries the main schedule. CA needs higher K (ratio 2:1:2) for wood maturation. Supplement every 3–4 weeks:","ಅವಕಾಡೋ ಡ್ರಿಪ್ ಮುಖ್ಯ ಕಾರ್ಯಕ್ರಮ ನಡೆಸುತ್ತದೆ. ಸೀತಾಫಲಕ್ಕೆ ಹೆಚ್ಚಿನ K ಬೇಕು (2:1:2). ಪ್ರತಿ 3–4 ವಾರಕ್ಕೊಮ್ಮೆ:"),
+  caSupDrench:  T("Custard Apple Supplement Drench (every 3–4 weeks)","ಸೀತಾಫಲ ಹೆಚ್ಚುವರಿ ಡ್ರೆಂಚ್ (ಪ್ರತಿ 3–4 ವಾರ)"),
+  caSopLine:    T("→ SOP 0:0:50: 5g/tree in 2L acidified water (pH 5.5)","→ SOP 0:0:50: 5g/ಮರ, 2L ಆಮ್ಲೀಯ ನೀರಿನಲ್ಲಿ (pH 5.5)"),
+  caSopNote:    T("Provides extra K for wood maturation without excess N","ಹೆಚ್ಚುವರಿ N ಇಲ್ಲದೆ ಮರ ಪಕ್ವತೆಗೆ K ನೀಡುತ್ತದೆ"),
+  foliarHdr:    T("Foliar Micronutrient Sprays (shared with Guava)","ಎಲೆ ಸೂಕ್ಷ್ಮ ಪೋಷಕ ಸಿಂಪಡಣೆ (ಸೀಬೆಯೊಂದಿಗೆ ಹಂಚಿಕೆ)"),
+  foliarOk:     T("Custard Apple stomates accessible — foliar works. Avocado excluded.","ಸೀತಾಫಲ ರಂಧ್ರಗಳು ಲಭ್ಯ — ಎಲೆ ಸಿಂಪಡಣೆ ಕಾರ್ಯ ನಿರ್ವಹಿಸುತ್ತದೆ. ಅವಕಾಡೋ ಹೊರಗಿಡಲಾಗಿದೆ."),
+  pruneHdrCA:   T("Pruning — Solapur Method","ಕತ್ತರಿಸುವಿಕೆ — ಸೋಲಾಪೂರ್ ವಿಧಾನ"),
+  pruneTiming:  T("⏰ Timing: February – March ONLY","⏰ ಸಮಯ: ಫೆಬ್ರವರಿ – ಮಾರ್ಚ್ ಮಾತ್ರ"),
+  pruneWhy:     T("NOT May/June — monsoon opens wounds to peak fungal pressure. Feb pruning allows 8–10 weeks healing before monsoon.","ಮೇ/ಜೂನ್ ಬೇಡ — ಮಾನ್ಸೂನ್ ಶಿಲೀಂಧ್ರ ಹೆಚ್ಚಿಸುತ್ತದೆ. ಫೆಬ್ರವರಿ ಕಟ್ 8–10 ವಾರ ಗುಣವಾಗಲು ಅವಕಾಶ ನೀಡುತ್ತದೆ."),
+  irrigHdr:     T("Irrigation — Manual Valve Protocol","ನೀರಾವರಿ — ಕೈಯಿಂದ ವಾಲ್ವ್ ನಿಯಂತ್ರಣ"),
+  anthracHdr:   T("Anthracnose Program (All Crops)","ಆಂಥ್ರಾಕ್ನೋಸ್ ಕಾರ್ಯಕ್ರಮ (ಎಲ್ಲಾ ಬೆಳೆಗಳು)"),
+  per100L:      T("Per 100L spray water","ಪ್ರತಿ 100L ಸಿಂಪಡಣೆ ನೀರಿಗೆ"),
+  /* Guava tab */
+  guavaInfo:    T("Japanese Red (Taiwan Red) · Seedling rootstock · ~6 months · Intercrop in avocado rows","ಜಪಾನೀ ರೆಡ್ (ತೈವಾನ್ ರೆಡ್) · ಬೀಜ ರೂಟ್‌ಸ್ಟಾಕ್ · ~6 ತಿಂಗಳು · ಅವಕಾಡೋ ಸಾಲಿನಲ್ಲಿ ಅಂತರ ಬೆಳೆ"),
+  guavaCrisis:  T("⚠️ EMERGENCY PRIORITY — Guava is in crisis mode","⚠️ ತುರ್ತು ಆದ್ಯತೆ — ಸೀಬೆ ಬಿಕ್ಕಟ್ಟಿನಲ್ಲಿದೆ"),
+  guavaCrisisDetail: T("Plants are flowering at just 6 months — far too early. Every flower steals root/shoot development resources. Deblossom immediately → redirect energy to vegetative rebuilding.","ಕೇವಲ 6 ತಿಂಗಳಲ್ಲಿ ಹೂ ಬಿಡುತ್ತಿದೆ — ತುಂಬಾ ಮೊದಲು. ಪ್ರತಿ ಹೂ ಬೇರು/ಚಿಗುರು ಬೆಳವಣಿಗೆ ಕದಿಯುತ್ತದೆ. ತಕ್ಷಣ ಹೂ ತೆಗೆಯಿರಿ → ಸಸ್ಯ ಬೆಳವಣಿಗೆಗೆ ಶಕ್ತಿ ತಿರುಗಿಸಿ."),
+  deblosHdr:    T("Deblossoming Protocol (April — URGENT)","ಹೂ ತೆಗೆಯುವ ವಿಧಾನ (ಏಪ್ರಿಲ್ — ತುರ್ತು)"),
+  canopyHdr:    T("Canopy Structure — Step by Step","ಕ್ಯಾನಪಿ ರಚನೆ — ಹಂತ ಹಂತವಾಗಿ"),
+  guavaFertiHdr:T("Fertigation Supplement","ಫೆರ್ಟಿಗೇಷನ್ ಹೆಚ್ಚುವರಿ"),
+  guavaFertiBase:T("Avocado drip baseline + high-N supplement for post-deblossoming shoot elongation (target ratio 3:1:1.5).","ಅವಕಾಡೋ ಡ್ರಿಪ್ + ಹೂ ತೆಗೆದ ನಂತರ ಚಿಗುರಿಗೆ ಹೆಚ್ಚಿನ N (ಗುರಿ ಅನುಪಾತ 3:1:1.5)."),
+  guavaSupDrench:T("Guava Supplement Drench (every 3–4 weeks)","ಸೀಬೆ ಹೆಚ್ಚುವರಿ ಡ್ರೆಂಚ್ (ಪ್ರತಿ 3–4 ವಾರ)"),
+  guavaSupLine: T("→ Urea Phosphate 17:44:0: 5g + Urea: 3g per tree in 2L acidified water","→ ಯೂರಿಯಾ ಫಾಸ್ಫೇಟ್ 17:44:0: 5g + ಯೂರಿಯಾ: 3g ಪ್ರತಿ ಮರ, 2L ಆಮ್ಲೀಯ ನೀರು"),
+  guavaFoliarOk:T("Guava stomates accessible — foliar micronutrients effective. Same program as Custard Apple.","ಸೀಬೆ ರಂಧ್ರಗಳು ಲಭ್ಯ — ಎಲೆ ಸೂಕ್ಷ್ಮ ಪೋಷಕ ಪ್ರಭಾವಕಾರಿ. ಸೀತಾಫಲದ ಅದೇ ಕಾರ್ಯಕ್ರಮ."),
+  /* Inventory */
+  invTitle:     T("Input Inventory Tracker","ಒಳಸುರಿತ ದಾಸ್ತಾನು ಟ್ರ್ಯಾಕರ್"),
+  invSub:       T("All inputs for 5-acre mixed orchard. Update +/− after purchases or field usage. Review every Saturday.","5 ಎಕರೆ ಮಿಶ್ರ ತೋಟದ ಎಲ್ಲಾ ಒಳಸುರಿತ. +/− ಖರೀದಿ ಅಥವಾ ಬಳಕೆ ನಂತರ ನವೀಕರಿಸಿ. ಪ್ರತಿ ಶನಿವಾರ ಪರಿಶೀಲಿಸಿ."),
+  invItemsLow:  T("items low","ಐಟಂ ಕಡಿಮೆ"),
+  invFooter:    T("🟢 Adequate · 🔴 Below minimum — reorder · Never let WSF stock drop below 2 weeks supply","🟢 ಸಾಕಷ್ಟು · 🔴 ಕನಿಷ್ಠಕ್ಕಿಂತ ಕಡಿಮೆ — ಮರು-ಆದೇಶ ನೀಡಿ · WSF ಸ್ಟಾಕ್ 2 ವಾರದ ಕೆಳಗೆ ಬೀಳಲು ಬಿಡಬೇಡಿ"),
+  invCols:      { product:T("Product","ಉತ್ಪನ್ನ"), cat:T("Category","ವರ್ಗ"), unit:T("Pack Unit","ಪ್ಯಾಕ್ ಯೂನಿಟ್"), min:T("Min","ಕನಿಷ್ಠ"), stock:T("Stock","ಸ್ಟಾಕ್"), adj:T("Adjust","ಬದಲಾಯಿಸಿ") },
+  all:          T("All","ಎಲ್ಲಾ"),
+};
+
+const tx = (obj, lang) => obj[lang] || obj.en;
+
+/* ─── THEME ─── */
+const C={bg:"#f4ede2",card:"#fffdf9",primary:"#1c3d2a",secondary:"#2d6645",accent:"#c17f3a",accentLight:"#fdf0dc",text:"#1a1208",muted:"#6b5a3a",border:"#d9c9a8",red:"#7f1d1d",header:"#152d1e"};
+
+/* ─── DATA ─── */
+const weekDaysEn=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const weekDaysKn=["ಸೋಮವಾರ","ಮಂಗಳವಾರ","ಬುಧವಾರ","ಗುರುವಾರ","ಶುಕ್ರವಾರ","ಶನಿವಾರ","ಭಾನುವಾರ"];
+
+const dailyTasks=[
+  {time:"6:00–6:30",icon:"💧",en:{task:"Irrigation Check",detail:"Inspect mainlines, laterals, emitters. Verify Dosatron pH at drip outlets — target pH 5.8–6.0. Check for blocked emitters and salt crusting."},kn:{task:"ನೀರಾವರಿ ತಪಾಸಣೆ",detail:"ಮೇಯಿನ್‌ಲೈನ್, ಲ್ಯಾಟರಲ್, ಎಮಿಟರ್ ತಪಾಸಿಸಿ. ಡ್ರಿಪ್ ಔಟ್‌ಲೆಟ್‌ನಲ್ಲಿ Dosatron pH ಪರಿಶೀಲಿಸಿ — ಗುರಿ pH 5.8–6.0. ಬ್ಲಾಕ್ ಎಮಿಟರ್ ಮತ್ತು ಉಪ್ಪು ಹರಳು ಗಮನಿಸಿ."}},
+  {time:"6:30–7:00",icon:"📊",en:{task:"Tensiometer Reading",detail:"Record at 15cm + 30cm depth in avocado beds. Irrigate if >25 cb. NEVER allow >40 cb — avocado feeder roots suffocate quickly."},kn:{task:"ಟೆನ್ಸಿಯೊಮೀಟರ್ ಓದುವಿಕೆ",detail:"ಅವಕಾಡೋ ಮಡಿಯಲ್ಲಿ 15cm + 30cm ಆಳದಲ್ಲಿ ದಾಖಲಿಸಿ. >25 cb ಆದರೆ ನೀರು ಹಾಕಿ. >40 cb ಆಗಲು ಬಿಡಬೇಡಿ — ಅವಕಾಡೋ ಬೇರುಗಳು ಬೇಗ ಉಸಿರುಗಟ್ಟುತ್ತವೆ."}},
+  {time:"7:00–7:30",icon:"🔍",en:{task:"Scouting (1 acre/day)",detail:"Scout 20 trees: yellowing, tip-burn, mealybug, aphids, collar region. Rotate across all 5 acres completing full sweep each week."},kn:{task:"ಸ್ಕೌಟಿಂಗ್ (ದಿನಕ್ಕೆ 1 ಎಕರೆ)",detail:"20 ಮರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ: ಹಳದಿ, ತುದಿ ಸುಡು, ಮೀಲಿಬಗ್, ಗಿಡಹೇನು, ಟ್ರಂಕ್ ಮೂಲ. ಪ್ರತಿ ವಾರ 5 ಎಕರೆ ಸಂಪೂರ್ಣ ಸುತ್ತು."}},
+  {time:"7:30",icon:"🧪",en:{task:"Fertigation Run",detail:"Acidify irrigation → dissolve WSF per schedule → open correct valves → run → flush 5 min post-run. Log EC+pH of final solution."},kn:{task:"ಫೆರ್ಟಿಗೇಷನ್",detail:"ನೀರು ಆಮ್ಲೀಕರಣ → WSF ಕರಗಿಸಿ → ಸರಿಯಾದ ವಾಲ್ವ್ ತೆರೆಯಿರಿ → ನಡೆಸಿ → 5 ನಿಮಿಷ ಫ್ಲಶ್. EC+pH ದಾಖಲಿಸಿ."}},
+  {time:"4:00–5:00",icon:"🌾",en:{task:"Mulch & Weed",detail:"Maintain 4–6\" wood chip mulch. Keep 6\" clear from trunk to prevent collar rot. Hand-weed drip zone."},kn:{task:"ಮಲ್ಚ್ ಮತ್ತು ಕಳೆ",detail:"4–6\" ಮರದ ಚಿಪ್ ಮಲ್ಚ್ ಕಾಪಾಡಿ. ಟ್ರಂಕ್‌ನಿಂದ 6\" ಖಾಲಿ ಇರಲಿ — ಕಾಲರ್ ರಾಟ್ ತಡೆ. ಡ್ರಿಪ್ ವಲಯದಲ್ಲಿ ಕೈಯಿಂದ ಕಳೆ ತೆಗೆಯಿರಿ."}},
+  {time:"5:00",icon:"📋",en:{task:"End-of-Day Log",detail:"Record: irrigation time, pH/EC readings, pest/disease observations, fertilizers applied, labor hours, any anomalies."},kn:{task:"ದಿನ ಕೊನೆಯ ದಾಖಲೆ",detail:"ದಾಖಲಿಸಿ: ನೀರಾವರಿ ಸಮಯ, pH/EC ಓದುವಿಕೆ, ಕೀಟ/ರೋಗ ಗಮನಿಕೆ, ಹಾಕಿದ ಗೊಬ್ಬರ, ಕೂಲಿ ಸಮಯ, ಯಾವುದೇ ಅಸಹಜತೆ."}},
+];
+
+const weeklySchedule={
+  Monday:   {icon:"💧",en:{task:"Water Quality Check + WSF Prep",detail:"Test irrigation water: pH 5.8–6.0 post-Dosatron, EC <1.2 dS/m. Prepare WSF stock solutions. Recalibrate Dosatron if pH out of range."},kn:{task:"ನೀರು ಗುಣಮಟ್ಟ + WSF ತಯಾರಿ",detail:"ನೀರು ಪರೀಕ್ಷಿಸಿ: pH 5.8–6.0, EC <1.2 dS/m. WSF ದ್ರಾವಣ ತಯಾರಿಸಿ. pH ತಪ್ಪಾದರೆ Dosatron ಮರು-ಕ್ಯಾಲಿಬ್ರೇಟ್ ಮಾಡಿ."}},
+  Tuesday:  {icon:"✂️",en:{task:"Avocado Canopy Work",detail:"Remove water sprouts, suckers, narrow crotch angle branches. Remove ALL premature flower buds — no fruiting in Year 2. Do NOT remove lower skirting branches."},kn:{task:"ಅವಕಾಡೋ ಕ್ಯಾನಪಿ ಕೆಲಸ",detail:"ವಾಟರ್ ಸ್ಪ್ರೌಟ್, ಕೂಸಿನ ಚಿಗುರು, ಕಿರಿದಾದ ಕೊಂಬೆ ತೆಗೆಯಿರಿ. ಎಲ್ಲಾ ಅಕಾಲಿಕ ಮೊಗ್ಗು ತೆಗೆಯಿರಿ — ವರ್ಷ 2 ರಲ್ಲಿ ಫಲ ಬೇಡ. ಕೆಳ ಕೊಂಬೆ ತೆಗೆಯಬೇಡಿ."}},
+  Wednesday:{icon:"🔍",en:{task:"Mealybug Scouting (50 trees)",detail:"Check leaf undersides + stem junctions on 50 avocado trees. >5 colonies/tree: deploy Cryptolaemus immediately. No improvement in 2 weeks: escalate to Buprofezin 2 mL/L."},kn:{task:"ಮೀಲಿಬಗ್ ಸ್ಕೌಟಿಂಗ್ (50 ಮರ)",detail:"50 ಅವಕಾಡೋ ಮರಗಳ ಎಲೆ ಕೆಳಭಾಗ + ಕಾಂಡ ಜಂಕ್ಷನ್ ತಪಾಸಿಸಿ. >5 ವಸಾಹತು/ಮರ: ತಕ್ಷಣ ಕ್ರಿಪ್ಟೋಲೆಮಸ್ ಬಿಡಿ. 2 ವಾರ ಸುಧಾರಣೆ ಇಲ್ಲದಿದ್ದರೆ: Buprofezin 2 mL/L."}},
+  Thursday: {icon:"⚙️",en:{task:"Irrigation System Maintenance",detail:"Inspect valves, clean inline filters, verify Dosatron output rate, check emitter flow rates. Flush laterals if salt deposits visible at emitter tips."},kn:{task:"ನೀರಾವರಿ ವ್ಯವಸ್ಥೆ ನಿರ್ವಹಣೆ",detail:"ವಾಲ್ವ್ ತಪಾಸಿಸಿ, ಫಿಲ್ಟರ್ ಸ್ವಚ್ಛಗೊಳಿಸಿ, Dosatron ಔಟ್‌ಪುಟ್ ಪರಿಶೀಲಿಸಿ, ಎಮಿಟರ್ ಪ್ರವಾಹ ತಪಾಸಿಸಿ. ಉಪ್ಪು ಕಾಣಿಸಿದರೆ ಲ್ಯಾಟರಲ್ ಫ್ಲಶ್ ಮಾಡಿ."}},
+  Friday:   {icon:"🐜",en:{task:"Ant Band Inspection (100 trees)",detail:"Inspect sticky trunk bands on 100 trees. Refresh dried glue. Top up borax/jaggery bait stations. Ants are mealybug vectors — critical for biocontrol."},kn:{task:"ಇರುವೆ ಬ್ಯಾಂಡ್ ತಪಾಸಣೆ (100 ಮರ)",detail:"100 ಮರಗಳ ಅಂಟು ಟ್ರಂಕ್ ಬ್ಯಾಂಡ್ ತಪಾಸಿಸಿ. ಒಣ ಅಂಟು ಬದಲಿಸಿ. ಬೋರಾಕ್ಸ್/ಬೆಲ್ಲ ಬೈಟ್ ತುಂಬಿಸಿ. ಇರುವೆ ಮೀಲಿಬಗ್ ವಾಹಕ — ಬಯೋಕಂಟ್ರೋಲ್‌ಗೆ ನಿರ್ಣಾಯಕ."}},
+  Saturday: {icon:"📋",en:{task:"Records, Review & Procurement",detail:"Update spray log, fertigation records, scouting log. Check all stock levels vs minimums. Place procurement orders. Review upcoming monthly tasks."},kn:{task:"ದಾಖಲೆ, ಪರಿಶೀಲನೆ ಮತ್ತು ಖರೀದಿ",detail:"ಸ್ಪ್ರೇ ದಾಖಲೆ, ಫೆರ್ಟಿಗೇಷನ್ ದಾಖಲೆ, ಸ್ಕೌಟಿಂಗ್ ದಾಖಲೆ ನವೀಕರಿಸಿ. ಎಲ್ಲಾ ಸ್ಟಾಕ್ ಪರಿಶೀಲಿಸಿ. ಖರೀದಿ ಆದೇಶ ಕೊಡಿ."}},
+  Sunday:   {icon:"🌿",en:{task:"Irrigation + Visual Walk",detail:"Run irrigation as scheduled. Walk all 5 acres — visual check only. Flag obvious issues for Monday action. Rest day — minimal intervention."},kn:{task:"ನೀರಾವರಿ + ದೃಶ್ಯ ವಿಹಾರ",detail:"ನಿಗದಿಯಂತೆ ನೀರು ಹಾಕಿ. 5 ಎಕರೆ ನಡೆದಾಡಿ — ದೃಶ್ಯ ಪರೀಕ್ಷೆ ಮಾತ್ರ. ಸ್ಪಷ್ಟ ಸಮಸ್ಯೆ ಸೋಮವಾರ ಕ್ರಮಕ್ಕೆ ಗುರುತಿಸಿ. ವಿಶ್ರಾಂತಿ ದಿನ."}},
+};
+
+const monthlyCalendar=[
+  {month:{en:"April",   kn:"ಏಪ್ರಿಲ್"},   icon:"🌺",accent:"#c17f3a",tasks:{en:["Guava deblossoming — NAA 50–100 ppm or 10% Urea spray immediately","1st Cryptolaemus release on infested avocados (monthly Mar–Oct)","Fe-EDDHA 15g + ZnSO₄ 50g + MnSO₄ 25g avocado soil drench","Daily avocado-only irrigation if >35°C"],kn:["ಸೀಬೆ ಹೂ ತೆಗೆಯಿರಿ — NAA 50–100 ppm ಅಥವಾ 10% ಯೂರಿಯಾ ಸ್ಪ್ರೇ ತಕ್ಷಣ","ಅವಕಾಡೋಗೆ 1ನೇ ಕ್ರಿಪ್ಟೋಲೆಮಸ್ ಬಿಡಿ (ಮಾ–ಅಕ್ಟೋ ತಿಂಗಳಿಗೊಮ್ಮೆ)","Fe-EDDHA 15g + ZnSO₄ 50g + MnSO₄ 25g ಅವಕಾಡೋ ಮಣ್ಣು ಡ್ರೆಂಚ್",">35°C ಆದರೆ ಅವಕಾಡೋಗೆ ಮಾತ್ರ ದಿನ ನೀರು"]}},
+  {month:{en:"May",     kn:"ಮೇ"},          icon:"☀️",accent:"#d97706",tasks:{en:["Gypsum broadcast (calc from ESP/CEC; interim 2 kg/tree)","Aliette #1 soil drench — ONLY if 60+ days past spring flush","Copper Oxychloride #1 anthracnose spray all crops","Leaching irrigation — extend run by leaching fraction"],kn:["ಜಿಪ್ಸಮ್ ಹರಡಿ (ESP/CEC ಲೆಕ್ಕ; ತಾತ್ಕಾಲಿಕ 2 kg/ಮರ)","Aliette #1 ಮಣ್ಣು ಡ್ರೆಂಚ್ — ಸ್ಪ್ರಿಂಗ್ ಫ್ಲಶ್ 60+ ದಿನ ಆದ ನಂತರ ಮಾತ್ರ","ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೆ ಕಾಪರ್ ಆಕ್ಸಿಕ್ಲೋರೈಡ್ #1","ಲೀಚಿಂಗ್ ನೀರಾವರಿ — ಲೀಚಿಂಗ್ ಭಾಗ ಲೆಕ್ಕಿಸಿ ವಿಸ್ತರಿಸಿ"]}},
+  {month:{en:"June",    kn:"ಜೂನ್"},         icon:"🌧️",accent:"#1d4ed8",tasks:{en:["Switch fertigation to Ammonium Sulfate (monsoon acidifying N)","Ridomil Gold #1 Phytophthora soil drench","Azoxystrobin #1 anthracnose spray all crops","Close intercrop valves during heavy rain","CA + Guava foliar micronutrient #2"],kn:["ಫೆರ್ಟಿಗೇಷನ್ ಅಮೋನಿಯಮ್ ಸಲ್ಫೇಟ್‌ಗೆ ಬದಲಿಸಿ","Ridomil Gold #1 ಫೈಟೋಫ್ಥೋರಾ ಮಣ್ಣು ಡ್ರೆಂಚ್","ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೆ Azoxystrobin #1 ಆಂಥ್ರಾಕ್ನೋಸ್ ಸ್ಪ್ರೇ","ಭಾರಿ ಮಳೆಯಲ್ಲಿ ಅಂತರ ಬೆಳೆ ವಾಲ್ವ್ ಮುಚ್ಚಿ","ಸೀತಾಫಲ + ಸೀಬೆಗೆ ಎಲೆ ಪೋಷಕ #2"]}},
+  {month:{en:"July",    kn:"ಜುಲೈ"},         icon:"🌦️",accent:"#2563eb",tasks:{en:["Minimal pruning — monsoon wounds prone to fungi","Copper Oxychloride #2 anthracnose spray all crops","Monitor for waterlogging daily"],kn:["ಕನಿಷ್ಠ ಕತ್ತರಿಸುವಿಕೆ — ಮಾನ್ಸೂನ್ ಗಾಯ ಶಿಲೀಂಧ್ರಕ್ಕೆ ತುತ್ತಾಗುತ್ತದೆ","ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೆ ಕಾಪರ್ ಆಕ್ಸಿಕ್ಲೋರೈಡ್ #2","ದಿನ ನೀರು ನಿಲ್ಲುವಿಕೆ ಗಮನಿಸಿ"]}},
+  {month:{en:"August",  kn:"ಆಗಸ್ಟ್"},       icon:"🍃",accent:"#059669",tasks:{en:["Orondis Ultra (FRAC 49) Phytophthora drench — novel chemistry","Azoxystrobin #2 anthracnose spray all crops","2nd Cryptolaemus release"],kn:["Orondis Ultra (FRAC 49) ಫೈಟೋಫ್ಥೋರಾ ಡ್ರೆಂಚ್ — ಹೊಸ ರಸಾಯನ ವಿಜ್ಞಾನ","ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೆ Azoxystrobin #2","2ನೇ ಕ್ರಿಪ್ಟೋಲೆಮಸ್ ಬಿಡಿ"]}},
+  {month:{en:"September",kn:"ಸೆಪ್ಟೆಂಬರ್"},  icon:"🌤️",accent:"#7c3aed",tasks:{en:["Resume UP + CaNO₃ fertigation (SEQUENTIAL — separate days)","2nd Fe-EDDHA + ZnSO₄ + MnSO₄ avocado soil drench","Deploy ME traps 10–15/acre (fruit fly season)","CA + Guava foliar micronutrient #4"],kn:["UP + CaNO₃ ಫೆರ್ಟಿಗೇಷನ್ ಮತ್ತೆ ಶುರು (ಪ್ರತ್ಯೇಕ ದಿನ)","2ನೇ Fe-EDDHA + ZnSO₄ + MnSO₄ ಅವಕಾಡೋ ಮಣ್ಣು ಡ್ರೆಂಚ್","ME ಟ್ರ್ಯಾಪ್ 10–15/ಎಕರೆ (ಹಣ್ಣಿನ ನೊಣ ಮೌಸಮ್)","ಸೀತಾಫಲ + ಸೀಬೆಗೆ ಎಲೆ ಪೋಷಕ #4"]}},
+  {month:{en:"October", kn:"ಅಕ್ಟೋಬರ್"},    icon:"🍂",accent:"#c17f3a",tasks:{en:["Aliette #4 foliar spray — post-monsoon flush must be 60+ days mature","Guava tip prune 10 cm for secondary branching"],kn:["Aliette #4 ಎಲೆ ಸ್ಪ್ರೇ — ಮಾನ್ಸೂನ್ ನಂತರ ಫ್ಲಶ್ 60+ ದಿನ ಹಣ್ಣಾಗಿರಬೇಕು","ಸೀಬೆ ತುದಿ 10 cm ಕತ್ತರಿಸಿ — ದ್ವಿತೀಯ ಕೊಂಬೆ ಬೆಳವಣಿಗೆ"]}},
+  {month:{en:"November",kn:"ನವೆಂಬರ್"},      icon:"🌾",accent:"#8b5a2a",tasks:{en:["Switch to SOP + MgSO₄ only — CEASE ALL NITROGEN","Reduce irrigation frequency across all crops","Remove all emerging avocado flower buds"],kn:["SOP + MgSO₄ ಮಾತ್ರ — ಎಲ್ಲಾ ಸಾರಜನಕ ನಿಲ್ಲಿಸಿ","ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೆ ನೀರಾವರಿ ಕಡಿಮೆ ಮಾಡಿ","ಅವಕಾಡೋ ಹೊಸ ಮೊಗ್ಗು ತೆಗೆಯಿರಿ"]}},
+  {month:{en:"December",kn:"ಡಿಸೆಂಬರ್"},    icon:"🧪",accent:"#4a5568",tasks:{en:["Send soil + water samples to UAS Bangalore / ICAR-CSSRI","Reduce avocado irrigation to every 2–3 days"],kn:["UAS ಬೆಂಗಳೂರು / ICAR-CSSRI ಗೆ ಮಣ್ಣು + ನೀರಿನ ಮಾದರಿ ಕಳುಹಿಸಿ","ಅವಕಾಡೋ ನೀರಾವರಿ 2–3 ದಿನಕ್ಕೊಮ್ಮೆ ಮಾಡಿ"]}},
+  {month:{en:"January", kn:"ಜನವರಿ"},        icon:"❄️",accent:"#2a4a8a",tasks:{en:["Bordeaux mixture 1% dormant spray all crops — overwintering spores","Mineral oil 10 mL/L for scale insects on all crops","Trunk whitewash if canopy sparse"],kn:["ಎಲ್ಲಾ ಬೆಳೆಗಳಿಗೆ ಬೋರ್ಡೋ 1% ಸ್ಪ್ರೇ — ಚಳಿಗಾಲ ಬೀಜಕ","ಸ್ಕೇಲ್ ಕೀಟಕ್ಕೆ ಮಿನರಲ್ ಆಯಿಲ್ 10 mL/L","ಕ್ಯಾನಪಿ ತೆಳ್ಳಗಿದ್ದರೆ ಟ್ರಂಕ್ ಬಿಳಿ ಬಣ್ಣ ಹಚ್ಚಿ"]}},
+  {month:{en:"February",kn:"ಫೆಬ್ರವರಿ"},    icon:"🌱",accent:"#2d6645",tasks:{en:["Custard Apple pruning — Solapur method (head back at 90 cm)","2nd elemental sulfur ring 50g/tree","Spring fertigation resumes: NPK 19:19:19","VAM drench 3–4 weeks after last fungicide"],kn:["ಸೀತಾಫಲ ಕತ್ತರಿಸುವಿಕೆ — ಸೋಲಾಪೂರ್ ವಿಧಾನ (90 cm ನಲ್ಲಿ)","2ನೇ ಗಂಧಕ ರಿಂಗ್ 50g/ಮರ","ಸ್ಪ್ರಿಂಗ್ ಫೆರ್ಟಿಗೇಷನ್: NPK 19:19:19 ಮತ್ತೆ ಶುರು","ಕೊನೆ ಶಿಲೀಂಧ್ರನಾಶಕ 3–4 ವಾರ ನಂತರ VAM ಡ್ರೆಂಚ್"]}},
+  {month:{en:"March",   kn:"ಮಾರ್ಚ್"},       icon:"🌸",accent:"#9f1239",tasks:{en:["Fe-EDDHA + ZnSO₄ + MnSO₄ avocado soil drench","CA + Guava foliar #1: Zn-EDTA 150g + Mn-EDTA 150g + Solubor 150g per 100L","1st Cryptolaemus release","Leaf tissue samples to UAS lab","Acid injection titration recalibration"],kn:["Fe-EDDHA + ZnSO₄ + MnSO₄ ಅವಕಾಡೋ ಮಣ್ಣು ಡ್ರೆಂಚ್","ಸೀತಾಫಲ + ಸೀಬೆ ಎಲೆ #1: Zn-EDTA 150g + Mn-EDTA 150g + Solubor 150g ಪ್ರತಿ 100L","1ನೇ ಕ್ರಿಪ್ಟೋಲೆಮಸ್ ಬಿಡಿ","UAS ಲ್ಯಾಬ್‌ಗೆ ಎಲೆ ಅಂಗಾಂಶ ಮಾದರಿ","ಆಮ್ಲ ಚುಚ್ಚುಮದ್ದು ಮರು-ಕ್ಯಾಲಿಬ್ರೇಟ್"]}},
+];
+
+const seasons=[
+  {id:"spring",     label:{en:"Feb–Mar · Spring Flush",kn:"ಫೆಬ್ರ–ಮಾರ್ · ಸ್ಪ್ರಿಂಗ್ ಫ್ಲಶ್"},color:"#2d6645",
+   rows:[{day:"Day 1",product:"NPK 19:19:19",rate:"12–15g/tree",en:"Balanced flush initiator — N+P+K for new growth",kn:"ಬ್ಯಾಲೆನ್ಸ್ಡ್ ಫ್ಲಶ್ — ಹೊಸ ಬೆಳವಣಿಗೆಗೆ N+P+K"},{day:"Day 3",product:"Calcium Nitrate",rate:"6g/tree",en:"N + Ca²⁺ for cell wall — never same day as phosphate",kn:"ಕಣ ಗೋಡೆಗೆ N + Ca²⁺ — ಫಾಸ್ಫೇಟ್ ದಿನ ಹಾಕಬೇಡಿ"}],
+   note:{en:"⚠️ NEVER co-inject NPK with CaNO₃ — calcium phosphate precipitate blocks emitters. Protocol: NPK → flush 5 min → CaNO₃.",kn:"⚠️ NPK ಮತ್ತು CaNO₃ ಒಟ್ಟಿಗೆ ಚುಚ್ಚಬೇಡಿ — ಕ್ಯಾಲ್ಸಿಯಮ್ ಫಾಸ್ಫೇಟ್ ಎಮಿಟರ್ ಮುಚ್ಚುತ್ತದೆ. ಕ್ರಮ: NPK → 5 ನಿಮಿಷ ಫ್ಲಶ್ → CaNO₃."}},
+  {id:"premonsoon", label:{en:"Apr–May · Pre-Monsoon",kn:"ಏಪ್ರಿ–ಮೇ · ಮಾನ್ಸೂನ್ ಪೂರ್ವ"},color:"#d97706",
+   rows:[{day:"Day 1",product:"Urea Phosphate 17:44:0",rate:"10g/tree",en:"Rhizosphere acidification + P for root growth",kn:"ರೈಜೋಸ್ಫಿಯರ್ ಆಮ್ಲೀಕರಣ + ಬೇರಿಗೆ P"},{day:"Day 3",product:"Calcium Nitrate (SEPARATE)",rate:"6g/tree",en:"Nitrate-N; Ca²⁺ displaces Na⁺ from exchange sites",kn:"ನೈಟ್ರೇಟ್-N; Ca²⁺ ವಿನಿಮಯ ಸ್ಥಳದಿಂದ Na⁺ ಬದಲಿಸುತ್ತದೆ"},{day:"Day 5",product:"SOP 0:0:50",rate:"6g/tree",en:"K for osmotic regulation under heat stress",kn:"ಉಷ್ಣ ಒತ್ತಡದಲ್ಲಿ ಆಸ್ಮೋಟಿಕ್ ನಿಯಂತ್ರಣಕ್ಕೆ K"},{day:"Weekly",product:"Potassium Silicate",rate:"2 mL/L",en:"Si for heat and salt stress tolerance",kn:"ಉಷ್ಣ ಮತ್ತು ಉಪ್ಪು ಒತ್ತಡ ಸಹಿಷ್ಣುತೆಗೆ Si"}],
+   note:{en:"⚠️ UP and CaNO₃ must be on SEPARATE day runs. Guava supplement: 5g UP + 3g Urea per tree in 2L acidified water every 3–4 weeks.",kn:"⚠️ UP ಮತ್ತು CaNO₃ ಪ್ರತ್ಯೇಕ ದಿನ ಮಾಡಿ. ಸೀಬೆ ಹೆಚ್ಚುವರಿ: ಪ್ರತಿ 3–4 ವಾರ 2L ಆಮ್ಲ ನೀರಿನಲ್ಲಿ 5g UP + 3g ಯೂರಿಯಾ."}},
+  {id:"monsoon",    label:{en:"Jun–Aug · Monsoon",kn:"ಜೂನ್–ಆಗ · ಮಾನ್ಸೂನ್"},color:"#1d4ed8",
+   rows:[{day:"Day 1",product:"Ammonium Sulfate",rate:"12g/tree",en:"Acidifying N — counters monsoon soil pH rise",kn:"ಆಮ್ಲೀಕರಣ N — ಮಾನ್ಸೂನ್ pH ಏರಿಕೆ ಎದುರಿಸುತ್ತದೆ"},{day:"Day 4",product:"SOP 0:0:50",rate:"6g/tree",en:"K for root respiration and disease resistance",kn:"ಬೇರು ಉಸಿರಾಟ ಮತ್ತು ರೋಗ ನಿರೋಧಕ್ಕೆ K"}],
+   note:{en:"Close intercrop valves during heavy rain. Avocado feeder roots suffocate in anaerobic conditions within 24–48 hours — monitor waterlogging daily.",kn:"ಭಾರಿ ಮಳೆಯಲ್ಲಿ ಅಂತರ ಬೆಳೆ ವಾಲ್ವ್ ಮುಚ್ಚಿ. 24–48 ಗಂಟೆಯಲ್ಲಿ ಅವಕಾಡೋ ಬೇರು ಅನ್ಯೇರೋಬಿಕ್ ಸ್ಥಿತಿಯಲ್ಲಿ ಉಸಿರುಗಟ್ಟುತ್ತದೆ."}},
+  {id:"postmonsoon",label:{en:"Sep–Nov · Post-Monsoon",kn:"ಸೆಪ್ಟ–ನವ · ಮಾನ್ಸೂನ್ ನಂತರ"},color:"#7c3aed",
+   rows:[{day:"Day 1",product:"Urea Phosphate 17:44:0",rate:"10g/tree",en:"Autumn root flush support",kn:"ಶರದ್ಋತು ಬೇರು ಫ್ಲಶ್ ಬೆಂಬಲ"},{day:"Day 3",product:"Calcium Nitrate (SEPARATE)",rate:"8g/tree",en:"Wood maturation — higher Ca than spring",kn:"ಮರ ಪಕ್ವತೆ — ಸ್ಪ್ರಿಂಗ್‌ಗಿಂತ ಹೆಚ್ಚಿನ Ca"},{day:"Day 5",product:"SOP 0:0:50",rate:"6g/tree",en:"Carbohydrate storage for winter dormancy",kn:"ಚಳಿಗಾಲ ಸುಪ್ತತೆಗೆ ಕಾರ್ಬೋಹೈಡ್ರೇಟ್ ಸಂಗ್ರಹ"}],
+   note:{en:"MAP completely removed — MAP + CaNO₃ causes calcium phosphate precipitation. Urea Phosphate (UP) substituted throughout the program.",kn:"MAP ಸಂಪೂರ್ಣ ತೆಗೆದಿದೆ — MAP + CaNO₃ ಕ್ಯಾಲ್ಸಿಯಮ್ ಫಾಸ್ಫೇಟ್ ಕೆಸರು ಉಂಟು ಮಾಡುತ್ತದೆ. ಯೂರಿಯಾ ಫಾಸ್ಫೇಟ್ (UP) ಬದಲಿ."}},
+  {id:"dormancy",   label:{en:"Dec–Jan · Dormancy",kn:"ಡಿಸ–ಜನ · ಸುಪ್ತತೆ"},color:"#6b4c2a",
+   rows:[{day:"Day 1",product:"SOP 0:0:50",rate:"12g/tree",en:"Tissue hardening — no N, prevent vulnerable flush",kn:"ಅಂಗಾಂಶ ಗಟ್ಟಿ — N ಇಲ್ಲ, ದುರ್ಬಲ ಫ್ಲಶ್ ತಡೆ"},{day:"Day 4",product:"Magnesium Sulfate",rate:"6g/tree",en:"Chlorophyll maintenance during dormancy",kn:"ಸುಪ್ತತೆ ಸಮಯ ಕ್ಲೋರೊಫಿಲ್ ಕಾಪಾಡಿ"}],
+   note:{en:"⚠️ NITROGEN DELIBERATELY WITHHELD. Any N triggers vegetative flush vulnerable to frost damage and fungal attack.",kn:"⚠️ ಸಾರಜನಕ ಉದ್ದೇಶಪೂರ್ವಕವಾಗಿ ಬಿಡಲಾಗಿದೆ. ಯಾವುದೇ N ಹಿಮ ಹಾನಿ ಮತ್ತು ಶಿಲೀಂಧ್ರಕ್ಕೆ ತುತ್ತಾಗುವ ಫ್ಲಶ್ ಉಂಟು ಮಾಡುತ್ತದೆ."}},
+];
+
+const avocadoMicro=[
+  {nutrient:{en:"Iron",kn:"ಕಬ್ಬಿಣ"},product:"Fe-EDDHA 6%",rate:"15g/tree",timing:"Mar + Sep",
+   method:{en:"Dissolve in 5L acidified water (pH 5.5), drip drench. Fe-EDDHA stable to pH 10 — only iron chelate that works in alkaline soil.",kn:"5L ಆಮ್ಲ ನೀರು (pH 5.5) ನಲ್ಲಿ ಕರಗಿಸಿ, ಡ್ರಿಪ್ ಡ್ರೆಂಚ್. Fe-EDDHA pH 10 ವರೆಗೆ ಸ್ಥಿರ — ಕ್ಷಾರ ಮಣ್ಣಿನಲ್ಲಿ ಕಾರ್ಯ ನಿರ್ವಹಿಸುವ ಏಕಮಾತ್ರ ಕಬ್ಬಿಣ ಚೆಲೇಟ್."}},
+  {nutrient:{en:"Zinc",kn:"ಸತು"},product:"ZnSO₄·7H₂O (NOT Zn-EDTA)",rate:"50g/tree",timing:"Mar + Sep",
+   method:{en:"⚠️ Zn-EDTA FAILS above pH 7 — confirmed on pH 7.8 soil. Use plain ZnSO₄ dissolved in acidified water pH 5.5, drip inject.",kn:"⚠️ pH 7 ಮೇಲೆ Zn-EDTA ವಿಫಲ — pH 7.8 ಮಣ್ಣಿನಲ್ಲಿ ದೃಢಪಟ್ಟಿದೆ. ಸರಳ ZnSO₄ pH 5.5 ಆಮ್ಲ ನೀರಿನಲ್ಲಿ ಕರಗಿಸಿ ಡ್ರಿಪ್ ಚುಚ್ಚಿ."}},
+  {nutrient:{en:"Manganese",kn:"ಮ್ಯಾಂಗನೀಸ್"},product:"MnSO₄ (NOT Mn-EDTA)",rate:"25g/tree",timing:"Mar + Sep",
+   method:{en:"⚠️ Mn-EDTA also dechelates above pH 7. Dissolve MnSO₄ in acidified water, drip inject alongside ZnSO₄.",kn:"⚠️ Mn-EDTA ಕೂಡ pH 7 ಮೇಲೆ ಬೇರ್ಪಡುತ್ತದೆ. MnSO₄ ಆಮ್ಲ ನೀರಿನಲ್ಲಿ ಕರಗಿಸಿ ZnSO₄ ಜೊತೆ ಡ್ರಿಪ್ ಚುಚ್ಚಿ."}},
+  {nutrient:{en:"Boron",kn:"ಬೋರಾನ್"},product:"Solubor 20.5% (soil drench)",rate:"2g/tree",timing:"Mar only",
+   method:{en:"5L water soil drench. ⚠️ CAUTION: Leaf B >100 ppm causes necrosis identical to salt burn — confounds diagnosis in this saline environment.",kn:"5L ನೀರು ಮಣ್ಣು ಡ್ರೆಂಚ್. ⚠️ ಎಚ್ಚರಿಕೆ: ಎಲೆ B >100 ppm ಉಪ್ಪು ಸುಡಿನಂತೆ ನೆಕ್ರೋಸಿಸ್ ಉಂಟು ಮಾಡುತ್ತದೆ — ಲವಣ ಪರಿಸರದಲ್ಲಿ ರೋಗನಿರ್ಣಯ ಗೊಂದಲ."}},
+];
+
+const fungicideProgram=[
+  {num:"1",timing:{en:"May (60+ days post-spring flush)",kn:"ಮೇ (ಸ್ಪ್ರಿಂಗ್ ಫ್ಲಶ್ 60+ ದಿನ ನಂತರ)"},product:"Aliette (Fosetyl-Al 80% WP)",frac:"33",rate:"3 g/L · 2–3L/tree",method:{en:"Soil drench",kn:"ಮಣ್ಣು ಡ್ರೆಂಚ್"},note:{en:"Phosphonate ineffective during flush. Apply ONLY after flush fully matured — 60 days minimum.",kn:"ಫ್ಲಶ್ ಸಮಯ ಫಾಸ್ಫೋನೇಟ್ ನಿಷ್ಪ್ರಭಾವ. ಫ್ಲಶ್ ಸಂಪೂರ್ಣ ಹಣ್ಣಾದ ನಂತರ ಮಾತ್ರ — ಕನಿಷ್ಠ 60 ದಿನ."}},
+  {num:"2",timing:{en:"Late June",kn:"ಜೂನ್ ಕೊನೆ"},product:"Ridomil Gold (Metalaxyl 4% + Mancozeb 64%)",frac:"4+M03",rate:"2.5 g/L · 2–3L/tree",method:{en:"Soil drench",kn:"ಮಣ್ಣು ಡ್ರೆಂಚ್"},note:{en:"Broad-spectrum. 14-day gap from copper. NEVER tank-mix Aliette with copper.",kn:"ವ್ಯಾಪಕ. ಕಾಪರ್‌ನಿಂದ 14 ದಿನ ಅಂತರ. Aliette ಮತ್ತು ಕಾಪರ್ ಒಟ್ಟಿಗೆ ಬೆರೆಸಬೇಡಿ."}},
+  {num:"3",timing:{en:"August",kn:"ಆಗಸ್ಟ್"},product:"Orondis Ultra (Oxathiapiprolin + Mandipropamid)",frac:"49+40",rate:"0.7 mL/L",method:{en:"Soil drench/drip",kn:"ಮಣ್ಣು ಡ್ರೆಂಚ್/ಡ್ರಿಪ್"},note:{en:"Novel FRAC 49 — prevents metalaxyl-resistant strains. Off-label for avocado; India CIR-19493/2023.",kn:"ನೂತನ FRAC 49 — metalaxyl-ನಿರೋಧಕ ತಡೆ. ಅವಕಾಡೋಗೆ off-label; ಭಾರತ CIR-19493/2023."}},
+  {num:"4",timing:{en:"October (post-monsoon flush matured)",kn:"ಅಕ್ಟೋಬರ್ (ಮಾನ್ಸೂನ್ ನಂತರ ಫ್ಲಶ್ ಹಣ್ಣಾದ ಬಳಿಕ)"},product:"Aliette foliar",frac:"33",rate:"3 g/L full canopy",method:{en:"Foliar spray",kn:"ಎಲೆ ಸ್ಪ್ರೇ"},note:{en:"Post-monsoon flush must be 60+ days mature. Phosphonate moves root-ward as source — >28 mg/kg root concentration.",kn:"ಮಾನ್ಸೂನ್ ನಂತರ ಫ್ಲಶ್ 60+ ದಿನ ಹಣ್ಣಾಗಿರಬೇಕು. ಫಾಸ್ಫೋನೇಟ್ ಬೇರಿನ ಕಡೆ ಹರಿಯುತ್ತದೆ — >28 mg/kg ಬೇರು ಸಾಂದ್ರತೆ."}},
+];
+
+const anthracnose=[
+  {num:"1",timing:{en:"Late May",kn:"ಮೇ ಕೊನೆ"},product:"Copper Oxychloride 50% WP",rate:"3 g/L"},
+  {num:"2",timing:{en:"Mid-June",kn:"ಜೂನ್ ಮಧ್ಯ"},product:"Azoxystrobin 23% SC",rate:"1 mL/L"},
+  {num:"3",timing:{en:"Mid-July",kn:"ಜುಲೈ ಮಧ್ಯ"},product:"Copper Oxychloride 50% WP",rate:"3 g/L"},
+  {num:"4",timing:{en:"Mid-August",kn:"ಆಗಸ್ಟ್ ಮಧ್ಯ"},product:"Azoxystrobin 23% SC",rate:"1 mL/L"},
+  {num:"5",timing:{en:"September (if humid)",kn:"ಸೆಪ್ಟೆಂಬರ್ (ತೇವ ಇದ್ದರೆ)"},product:"Copper Oxychloride 50% WP",rate:"3 g/L"},
+  {num:"6",timing:{en:"January (dormant)",kn:"ಜನವರಿ (ಸುಪ್ತ)"},product:"Bordeaux mixture 1%",rate:"Full canopy"},
+];
+
+const mealybugLadder=[
+  {priority:{en:"1st — Biocontrol",kn:"1ನೇ — ಜೈವಿಕ"},product:"Cryptolaemus montrouzieri",rate:"10/infested tree",when:{en:"Monthly Mar–Oct",kn:"ಮಾ–ಅಕ್ಟೋ ತಿಂಗಳಿಗೊಮ್ಮೆ"},note:{en:"Source: ICAR-NBAIR Hebbal (080-23511982) or Koppert India. Compatible with Buprofezin.",kn:"ಮೂಲ: ICAR-NBAIR ಹೆಬ್ಬಾಳ (080-23511982) ಅಥವಾ Koppert India. Buprofezin ಜೊತೆ ಹೊಂದಿಕೆ."},colors:["#16a34a","#dcfce7"]},
+  {priority:{en:"2nd — Chemical",kn:"2ನೇ — ರಾಸಾಯನಿಕ"},product:"Buprofezin 25% SC",rate:"2 mL/L",when:{en:">5 colonies/tree after 2 wks biocontrol",kn:"2 ವಾರ ಜೈವಿಕ ನಂತರ >5 ವಸಾಹತು/ಮರ"},note:{en:"",kn:""},colors:["#d97706","#fef3c7"]},
+  {priority:{en:"3rd — Escalate",kn:"3ನೇ — ಹೆಚ್ಚಿಸಿ"},product:"Spiromesifen 22.9% SC",rate:"0.3 mL/L",when:{en:"Heavy unresponsive infestation",kn:"ತೀವ್ರ ಸ್ಪಂದಿಸದ ಆಕ್ರಮಣ"},note:{en:"",kn:""},colors:["#dc2626","#fee2e2"]},
+  {priority:{en:"⚠️ Last resort",kn:"⚠️ ಕಡೆ ಉಪಾಯ"},product:"Clothianidin — soil drench ONLY",rate:"0.2 g/L",when:{en:"All above failed",kn:"ಮೇಲಿನ ಎಲ್ಲಾ ವಿಫಲ"},note:{en:"Neonicotinoids in pollen/nectar reduce bee flight 54% — Hass/Ettinger cross-pollination at risk. SOIL ONLY.",kn:"ಪರಾಗ/ಮಕರಂದದಲ್ಲಿ ನಿಯೋನಿಕ್ ಜೇನ್ನೊಣ ಹಾರಾಟ 54% ಕಡಿಮೆ — ಹಾಸ್/ಎಟ್ಟಿಂಗರ್ ಪರ-ಪರಾಗಸ್ಪರ್ಶ ಅಪಾಯ. ಮಣ್ಣು ಮಾತ್ರ."},colors:["#7f1d1d","#ffe4e6"]},
+];
+
+const foliarSprays=[
+  {num:"#1",timing:{en:"March",kn:"ಮಾರ್ಚ್"},mix:"Zn-EDTA 12%: 150g + Mn-EDTA 12%: 150g + Solubor 20.5%: 150g",note:{en:"",kn:""}},
+  {num:"#2",timing:{en:"Mid-May",kn:"ಮೇ ಮಧ್ಯ"},mix:"Zn-EDTA 12%: 150g + Mn-EDTA 12%: 150g + Solubor 20.5%: 150g",note:{en:"",kn:""}},
+  {num:"#3",timing:{en:"July",kn:"ಜುಲೈ"},mix:"Zn-EDTA 12%: 150g + Mn-EDTA 12%: 150g (skip Boron — rain washoff)",note:{en:"Skip Boron — monsoon washoff within hours.",kn:"ಬೋರಾನ್ ಬಿಡಿ — ಮಾನ್ಸೂನ್ ಕೆಲಗಂಟೆ ತೊಳೆಯುತ್ತದೆ."}},
+  {num:"#4",timing:{en:"September",kn:"ಸೆಪ್ಟೆಂಬರ್"},mix:"Zn-EDTA 12%: 150g + Mn-EDTA 12%: 150g + Solubor 20.5%: 150g",note:{en:"All sprays: pH 5.5 with citric acid. Silicone surfactant 0.25 mL/L mandatory.",kn:"ಎಲ್ಲಾ ಸ್ಪ್ರೇ: ಸಿಟ್ರಿಕ್ ಆಮ್ಲದಿಂದ pH 5.5. ಸಿಲಿಕೋನ್ ಸರ್ಫ್ಯಾಕ್ಟಂಟ್ 0.25 mL/L ಕಡ್ಡಾಯ."}},
+];
+
+const irrigationProtocol=[
+  {scenario:{en:"Daily hot season (>35°C)",kn:"ಪ್ರತಿದಿನ ಬಿಸಿ (>35°C)"},avo:{en:"OPEN — daily",kn:"ತೆರೆದ — ದಿನ"},ca:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"},guava:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"}},
+  {scenario:{en:"2×/week standard soak",kn:"ವಾರಕ್ಕೆ 2 ಬಾರಿ"},avo:{en:"OPEN",kn:"ತೆರೆದ"},ca:{en:"OPEN",kn:"ತೆರೆದ"},guava:{en:"OPEN",kn:"ತೆರೆದ"}},
+  {scenario:{en:"Heavy monsoon rain",kn:"ಭಾರಿ ಮಳೆ"},avo:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"},ca:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"},guava:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"}},
+  {scenario:{en:"Monsoon dry >5 days",kn:"ಮಾನ್ಸೂನ್ ಒಣ >5 ದಿನ"},avo:{en:"OPEN",kn:"ತೆರೆದ"},ca:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"},guava:{en:"CLOSED",kn:"ಮುಚ್ಚಿ"}},
+  {scenario:{en:"Monsoon dry >7 days",kn:"ಮಾನ್ಸೂನ್ ಒಣ >7 ದಿನ"},avo:{en:"OPEN",kn:"ತೆರೆದ"},ca:{en:"OPEN",kn:"ತೆರೆದ"},guava:{en:"OPEN",kn:"ತೆರೆದ"}},
+  {scenario:{en:"Post-monsoon (Oct–Nov)",kn:"ಮಾನ್ಸೂನ್ ನಂತರ (ಅಕ್ಟೋ–ನವ)"},avo:{en:"Daily",kn:"ದಿನ"},ca:{en:"2×/week",kn:"ವಾರ 2"},guava:{en:"2×/week",kn:"ವಾರ 2"}},
+  {scenario:{en:"Winter (Dec–Feb)",kn:"ಚಳಿಗಾಲ (ಡಿಸ–ಫೆಬ್)"},avo:{en:"Every 2–3 days",kn:"2–3 ದಿನ"},ca:{en:"1×/week",kn:"ವಾರ 1"},guava:{en:"1×/week",kn:"ವಾರ 1"}},
+];
+
+const emergencies=[
+  {title:{en:"Salt Burn (>30% avocado tip necrosis)",kn:"ಉಪ್ಪು ಸುಡು (>30% ಅವಕಾಡೋ ತುದಿ ನೆಕ್ರೋಸಿಸ್)"},icon:"🔥",color:"#dc2626",
+   steps:{en:["Leach at 150% normal irrigation volume immediately — do not wait","Increase SOP by +50% for 2 weeks","Send urgent leaf + soil EC analysis to UAS Bangalore","If EC_e >2.5 dS/m: double gypsum rate, weekly leaching"],kn:["ತಕ್ಷಣ 150% ಸಾಮಾನ್ಯ ಪರಿಮಾಣ ಲೀಚಿಂಗ್ — ನಿರೀಕ್ಷಿಸಬೇಡಿ","2 ವಾರ SOP +50% ಹೆಚ್ಚಿಸಿ","UAS ಬೆಂಗಳೂರಿಗೆ ತುರ್ತು ಎಲೆ + ಮಣ್ಣು EC ವಿಶ್ಲೇಷಣೆ","EC_e >2.5 dS/m: ಜಿಪ್ಸಮ್ ದ್ವಿಗುಣ, ವಾರ ಲೀಚಿಂಗ್"]}},
+  {title:{en:"Phytophthora (wilting without drought)",kn:"ಫೈಟೋಫ್ಥೋರಾ (ಬರಗಾಲ ಇಲ್ಲದೆ ಸೊರಗುವಿಕೆ)"},icon:"🍂",color:"#d97706",
+   steps:{en:["Check feeder roots: black + brittle = active Phytophthora infection","Drench all trees within 10m radius with Aliette 3 g/L immediately","Do NOT replant same hole for 12+ months","Increase mulch to 6\" depth","Audit irrigation for ponding near trunk"],kn:["ಫೀಡರ್ ಬೇರು ತಪಾಸಿಸಿ: ಕಪ್ಪು + ಸುರಿದ = ಸಕ್ರಿಯ ಫೈಟೋಫ್ಥೋರಾ","10m ತ್ರಿಜ್ಯದ ಎಲ್ಲಾ ಮರ Aliette 3 g/L ಡ್ರೆಂಚ್ ತಕ್ಷಣ","12+ ತಿಂಗಳು ಅದೇ ಗುಂಡಿಯಲ್ಲಿ ಮರ ನೆಡಬೇಡಿ","ಮಲ್ಚ್ 6\" ಆಳ ಹೆಚ್ಚಿಸಿ","ಟ್ರಂಕ್ ಹತ್ತಿರ ನೀರು ನಿಲ್ಲಿಕೆ ಪರಿಶೀಲಿಸಿ"]}},
+  {title:{en:"Iron Chlorosis (yellowing between veins)",kn:"ಕಬ್ಬಿಣ ಕ್ಲೋರೋಸಿಸ್ (ನರ ನಡುವೆ ಹಳದಿ)"},icon:"🌿",color:"#059669",
+   steps:{en:["Emergency Fe-EDDHA: 20g/tree in 5L acidified water","Check soil pH — if >8.0: increase UP + elemental sulfur","Verify Dosatron acid injection functioning","Test pH at drip outlet — must read 5.8–6.0"],kn:["ತುರ್ತು Fe-EDDHA: 5L ಆಮ್ಲ ನೀರಿನಲ್ಲಿ 20g/ಮರ","ಮಣ್ಣು pH ತಪಾಸಿಸಿ — >8.0 ಆದರೆ UP + ಗಂಧಕ ಹೆಚ್ಚಿಸಿ","Dosatron ಆಮ್ಲ ಚುಚ್ಚುಮದ್ದು ಕಾರ್ಯ ಪರಿಶೀಲಿಸಿ","ಡ್ರಿಪ್ ಔಟ್‌ಲೆಟ್ pH 5.8–6.0 ಇರಬೇಕು"]}},
+];
+
+const initialInventory=[
+  {id:1, name:"NPK 19:19:19",            cat:{en:"Fertilizer",kn:"ಗೊಬ್ಬರ"},        unit:"50 kg bag",  stock:3, min:2},
+  {id:2, name:"Urea Phosphate 17:44:0",  cat:{en:"Fertilizer",kn:"ಗೊಬ್ಬರ"},        unit:"25 kg bag",  stock:2, min:2},
+  {id:3, name:"Calcium Nitrate",         cat:{en:"Fertilizer",kn:"ಗೊಬ್ಬರ"},        unit:"25 kg bag",  stock:3, min:2},
+  {id:4, name:"SOP 0:0:50",             cat:{en:"Fertilizer",kn:"ಗೊಬ್ಬರ"},        unit:"25 kg bag",  stock:2, min:2},
+  {id:5, name:"Ammonium Sulfate",        cat:{en:"Fertilizer",kn:"ಗೊಬ್ಬರ"},        unit:"50 kg bag",  stock:2, min:1},
+  {id:6, name:"Magnesium Sulfate",       cat:{en:"Fertilizer",kn:"ಗೊಬ್ಬರ"},        unit:"25 kg bag",  stock:1, min:1},
+  {id:7, name:"Gypsum",                  cat:{en:"Soil Amendment",kn:"ಮಣ್ಣು ತಿದ್ದುಪಡಿ"},unit:"50 kg bag", stock:30,min:10},
+  {id:8, name:"Elemental Sulfur 90%",    cat:{en:"Soil Amendment",kn:"ಮಣ್ಣು ತಿದ್ದುಪಡಿ"},unit:"25 kg bag", stock:3, min:2},
+  {id:9, name:"Vermicompost / FYM",      cat:{en:"Soil Amendment",kn:"ಮಣ್ಣು ತಿದ್ದುಪಡಿ"},unit:"tonne",     stock:5, min:3},
+  {id:10,name:"Sulfuric Acid 35%",       cat:{en:"Soil Amendment",kn:"ಮಣ್ಣು ತಿದ್ದುಪಡಿ"},unit:"200L drum", stock:1, min:1},
+  {id:11,name:"Fe-EDDHA 6%",            cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"1 kg pack",  stock:8, min:5},
+  {id:12,name:"ZnSO₄·7H₂O",           cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"25 kg bag",  stock:2, min:1},
+  {id:13,name:"MnSO₄",                  cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"25 kg bag",  stock:1, min:1},
+  {id:14,name:"Zn-EDTA 12%",           cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"1 kg pack",  stock:3, min:2},
+  {id:15,name:"Mn-EDTA 12%",           cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"1 kg pack",  stock:3, min:2},
+  {id:16,name:"Solubor 20.5%",          cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"500 g pack", stock:4, min:2},
+  {id:17,name:"Potassium Silicate",      cat:{en:"Micronutrient",kn:"ಸೂಕ್ಷ್ಮ ಪೋಷಕ"}, unit:"5 L can",    stock:2, min:1},
+  {id:18,name:"Aliette (Fosetyl-Al 80%)",cat:{en:"Fungicide",kn:"ಶಿಲೀಂಧ್ರನಾಶಕ"},   unit:"1 kg pack",  stock:5, min:3},
+  {id:19,name:"Ridomil Gold",            cat:{en:"Fungicide",kn:"ಶಿಲೀಂಧ್ರನಾಶಕ"},   unit:"500 g pack", stock:4, min:2},
+  {id:20,name:"Orondis Ultra",           cat:{en:"Fungicide",kn:"ಶಿಲೀಂಧ್ರನಾಶಕ"},   unit:"250 mL",     stock:2, min:1},
+  {id:21,name:"Copper Oxychloride 50%",  cat:{en:"Fungicide",kn:"ಶಿಲೀಂಧ್ರನಾಶಕ"},   unit:"1 kg pack",  stock:8, min:4},
+  {id:22,name:"Azoxystrobin 23% SC",     cat:{en:"Fungicide",kn:"ಶಿಲೀಂಧ್ರನಾಶಕ"},   unit:"250 mL",     stock:2, min:1},
+  {id:23,name:"Cryptolaemus beetles",    cat:{en:"Biocontrol",kn:"ಜೈವಿಕ ನಿಯಂತ್ರಣ"}, unit:"50/pack",    stock:0, min:1},
+  {id:24,name:"Buprofezin 25% SC",       cat:{en:"Pesticide",kn:"ಕೀಟನಾಶಕ"},         unit:"250 mL",     stock:2, min:1},
+  {id:25,name:"NAA (Planofix)",          cat:{en:"Pesticide",kn:"ಕೀಟನಾಶಕ"},         unit:"500 mL",     stock:1, min:1},
+  {id:26,name:"Mineral Oil",             cat:{en:"Pesticide",kn:"ಕೀಟನಾಶಕ"},         unit:"5 L can",    stock:1, min:1},
+  {id:27,name:"ME Traps",                cat:{en:"Monitoring",kn:"ಮೇಲ್ವಿಚಾರಣೆ"},     unit:"unit",       stock:40,min:25},
+  {id:28,name:"VAM Inoculant",           cat:{en:"Biocontrol",kn:"ಜೈವಿಕ ನಿಯಂತ್ರಣ"}, unit:"1 kg pack",  stock:4, min:2},
+  {id:29,name:"Silicone Surfactant",     cat:{en:"Adjuvant",kn:"ಸಹಾಯಕ"},             unit:"500 mL",     stock:3, min:2},
+  {id:30,name:"Sticky Trunk Bands",      cat:{en:"Monitoring",kn:"ಮೇಲ್ವಿಚಾರಣೆ"},     unit:"10m roll",   stock:6, min:3},
+];
+
+const catColors={"Fertilizer":"#2d6645","ಗೊಬ್ಬರ":"#2d6645","Soil Amendment":"#6b4c2a","ಮಣ್ಣು ತಿದ್ದುಪಡಿ":"#6b4c2a","Micronutrient":"#1d4ed8","ಸೂಕ್ಷ್ಮ ಪೋಷಕ":"#1d4ed8","Fungicide":"#78350f","ಶಿಲೀಂಧ್ರನಾಶಕ":"#78350f","Pesticide":"#7f1d1d","ಕೀಟನಾಶಕ":"#7f1d1d","Biocontrol":"#059669","ಜೈವಿಕ ನಿಯಂತ್ರಣ":"#059669","Monitoring":"#4a4a6a","ಮೇಲ್ವಿಚಾರಣೆ":"#4a4a6a","Adjuvant":"#5a5a5a","ಸಹಾಯಕ":"#5a5a5a"};
+
+/* ─── HELPERS ─── */
+const Hdr=({icon,title,accent})=>(
+  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`2px solid ${accent||C.border}`}}>
+    <span style={{fontSize:18,flexShrink:0}}>{icon}</span>
+    <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:C.primary,lineHeight:1.3}}>{title}</span>
+  </div>
+);
+const Bdg=({text,bg,color})=>(
+  <span style={{fontSize:10,padding:"2px 7px",borderRadius:20,background:bg,color,fontWeight:700,whiteSpace:"nowrap",display:"inline-block"}}>{text}</span>
+);
+const Note=({text,accent})=>(
+  <div style={{background:`${accent||C.accent}12`,border:`1px solid ${accent||C.accent}44`,borderRadius:8,padding:"9px 13px",fontSize:12,color:C.text,lineHeight:1.6,marginTop:10}}>{text}</div>
+);
+
+/* ─── LOGIN ─── */
+function LoginScreen({onLogin,onCancel}){
+  const lang=useLang();
+  const [uid,setUid]=useState("");const [pw,setPw]=useState("");
+  const [show,setShow]=useState(false);const [err,setErr]=useState("");const [shaking,shake]=useState(false);
+  const attempt=()=>{
+    if(uid.trim()==="ramesh"&&pw==="Sh!r0"){onLogin();}
+    else{setErr(tx(t.loginErr,lang));shake(true);setTimeout(()=>shake(false),500);}
+  };
+  const fontClass=lang==="kn"?"kn":"";
+  return(
+    <div className={fontClass} style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{width:"100%",maxWidth:380}}>
+        <div style={{textAlign:"center",marginBottom:26}}>
+          <div style={{fontSize:44,marginBottom:8}}>🌿</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:21,fontWeight:700,color:C.primary}}>{tx(t.farmTitle,lang)}</div>
+          <div style={{fontSize:13,color:C.muted,marginTop:4}}>{tx(t.loginSub,lang)}</div>
+        </div>
+        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"24px",boxShadow:"0 4px 24px rgba(28,61,42,0.12)",animation:shaking?"shake 0.4s":"none"}}>
+          <div style={{fontSize:14,fontWeight:700,color:C.primary,marginBottom:16}}>🔒 {tx(t.loginTitle,lang)}</div>
+          <div style={{marginBottom:12}}>
+            <label style={{fontSize:11,fontWeight:700,color:C.muted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:0.5}}>{tx(t.loginUser,lang)}</label>
+            <input value={uid} onChange={e=>{setUid(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="ramesh" autoCapitalize="none" style={{width:"100%",padding:"10px 13px",borderRadius:8,border:`1.5px solid ${err?"#fca5a5":C.border}`,fontSize:14,color:C.text,background:"#fff",outline:"none"}}/>
+          </div>
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:11,fontWeight:700,color:C.muted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:0.5}}>{tx(t.loginPass,lang)}</label>
+            <div style={{position:"relative"}}>
+              <input type={show?"text":"password"} value={pw} onChange={e=>{setPw(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&attempt()} style={{width:"100%",padding:"10px 44px 10px 13px",borderRadius:8,border:`1.5px solid ${err?"#fca5a5":C.border}`,fontSize:14,color:C.text,background:"#fff",outline:"none"}}/>
+              <button onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:11,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:15,color:C.muted,padding:0}}>{show?"🙈":"👁️"}</button>
+            </div>
+          </div>
+          {err&&<div style={{fontSize:12,color:"#dc2626",background:"#fff5f5",border:"1px solid #fca5a5",borderRadius:8,padding:"7px 11px",marginBottom:14}}>⚠ {err}</div>}
+          <button onClick={attempt} style={{width:"100%",padding:"11px",background:C.primary,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:9,boxShadow:"0 3px 12px rgba(28,61,42,0.3)"}}>{tx(t.loginBtn,lang)}</button>
+          <button onClick={onCancel} style={{width:"100%",padding:"8px",background:"transparent",color:C.muted,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13,cursor:"pointer"}}>{tx(t.loginBack,lang)}</button>
+        </div>
+        <div style={{textAlign:"center",marginTop:14,fontSize:11,color:C.muted}}>{tx(t.loginRestrict,lang)}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── OVERVIEW ─── */
+function OverviewTab({day,setDay}){
+  const lang=useLang();
+  const wdays=lang==="kn"?weekDaysKn:weekDaysEn;
+  const wdayKeys=weekDaysEn;
+  const [openMonth,setOpenMonth]=useState("April");
+  const curMonthEn=new Date().toLocaleString("default",{month:"long"});
+  return(
+    <div className="fade-in">
+      <div className="g4">
+        {[
+          {icon:"🥑",label:t.avocadoLbl,val:"1,000",sub:t.avocadoSub,accent:"#2d6645"},
+          {icon:"🍈",label:t.caLbl,val:"400",sub:t.caSub,accent:"#b45309"},
+          {icon:"🍃",label:t.guavaLbl,val:"1,000",sub:t.guavaSub,accent:"#9f1239"},
+          {icon:"📍",label:t.farmLbl,val:lang==="kn"?"5 ಎಕರೆ":"5 Acres",sub:t.farmSub2,accent:"#4a5568"},
+        ].map((s,i)=>(
+          <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px",borderTop:`3px solid ${s.accent}`,boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
+            <div style={{fontSize:22,marginBottom:5}}>{s.icon}</div>
+            <div style={{fontSize:18,fontWeight:800,color:s.accent,fontFamily:"'Playfair Display',serif"}}>{s.val}</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,marginTop:2}}>{tx(s.label,lang)}</div>
+            <div style={{fontSize:11,color:C.muted,marginTop:2,lineHeight:1.4}}>{tx(s.sub,lang)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="g2a">
+        {/* Daily */}
+        <div>
+          <Hdr icon="⏰" title={tx(t.dailySched,lang)} accent={C.accent}/>
+          {dailyTasks.map((task,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:8,display:"flex",gap:10,alignItems:"flex-start",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+              <span style={{fontSize:20,flexShrink:0}}>{task.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:6,alignItems:"flex-start",flexWrap:"wrap"}}>
+                  <div style={{fontWeight:700,fontSize:13,color:C.text}}>{task[lang]?.task||task.en.task}</div>
+                  <span style={{fontSize:10,color:C.accent,fontWeight:700,background:C.accentLight,padding:"1px 7px",borderRadius:20,flexShrink:0,whiteSpace:"nowrap"}}>{task.time}</span>
+                </div>
+                <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6,marginTop:3}}>{task[lang]?.detail||task.en.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Weekly + Emergencies */}
+        <div>
+          <Hdr icon="📅" title={tx(t.weeklySched,lang)} accent={C.accent}/>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
+            {wdayKeys.map((dk,i)=>(
+              <button key={dk} onClick={()=>setDay(dk)} style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,border:"none",cursor:"pointer",background:day===dk?C.primary:"#e8dcc8",color:day===dk?"#fff":C.muted,transition:"all 0.15s"}}>{wdays[i].slice(0,3)}</button>
+            ))}
+          </div>
+          {weeklySchedule[day]&&(()=>{
+            const w=weeklySchedule[day];
+            return(
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:12,display:"flex",gap:10}}>
+                <span style={{fontSize:20,flexShrink:0}}>{w.icon}</span>
+                <div>
+                  <div style={{fontWeight:700,fontSize:13,color:C.text,marginBottom:4}}>{w[lang]?.task||w.en.task}</div>
+                  <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{w[lang]?.detail||w.en.detail}</div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <Hdr icon="🚨" title={tx(t.emergProto,lang)} accent="#dc2626"/>
+          {emergencies.map((e,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${e.color}`,borderRadius:10,padding:"11px 13px",marginBottom:8}}>
+              <div style={{display:"flex",gap:7,alignItems:"center",marginBottom:7}}>
+                <span style={{fontSize:17}}>{e.icon}</span>
+                <div style={{fontWeight:700,fontSize:12,color:e.color}}>{tx(e.title,lang)}</div>
+              </div>
+              {(e.steps[lang]||e.steps.en).map((s,si)=>(
+                <div key={si} style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:5}}>
+                  <span style={{fontSize:11,color:e.color,fontWeight:800,flexShrink:0}}>{si+1}.</span>
+                  <span style={{fontSize:11.5,color:C.muted,lineHeight:1.5}}>{s}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Monthly calendar */}
+      <div style={{marginTop:20}}>
+        <Hdr icon="🗓️" title={tx(t.monthlyCalHdr,lang)} accent={C.accent}/>
+        <div className="g3">
+          {monthlyCalendar.map((m,i)=>{
+            const isOpen=openMonth===m.month.en;
+            const isCur=m.month.en===curMonthEn;
+            const monthTasks=m.tasks[lang]||m.tasks.en;
+            return(
+              <div key={i} onClick={()=>setOpenMonth(isOpen?null:m.month.en)} style={{background:C.card,border:`1.5px solid ${isCur?m.accent:C.border}`,borderRadius:12,padding:"12px",cursor:"pointer",transition:"all 0.15s",boxShadow:isCur?"0 2px 10px rgba(0,0,0,0.1)":"0 1px 3px rgba(0,0,0,0.04)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:isOpen?10:0}}>
+                  <span style={{fontSize:17}}>{m.icon}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:12,color:isCur?m.accent:C.primary}}>{tx(m.month,lang)}</div>
+                    {!isOpen&&<div style={{fontSize:10,color:C.muted}}>{monthTasks.length} {tx(t.tasks,lang)}</div>}
+                  </div>
+                  {isCur&&<span style={{fontSize:9,color:"#fff",background:m.accent,padding:"2px 6px",borderRadius:20,fontWeight:700,flexShrink:0}}>{tx(t.now,lang)}</span>}
+                  <span style={{fontSize:10,color:C.muted}}>{isOpen?"▲":"▼"}</span>
+                </div>
+                {isOpen&&monthTasks.map((task,ti)=>(
+                  <div key={ti} style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:6}}>
+                    <span style={{color:m.accent,fontWeight:800,fontSize:11,flexShrink:0}}>•</span>
+                    <span style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{task}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── AVOCADO ─── */
+function AvocadoTab(){
+  const lang=useLang();
+  const [season,setSeason]=useState("spring");
+  const cur=seasons.find(s=>s.id===season);
+  const ACC="#2d6645";
+  return(
+    <div className="fade-in">
+      <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"12px 15px",marginBottom:18,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:34}}>🥑</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#14532d"}}>{tx(t.avocadoLbl,lang)} — 1,000 {lang==="kn"?"ಮರಗಳು":"Trees"}</div>
+          <div style={{fontSize:11.5,color:"#166534",marginTop:2,lineHeight:1.5}}>{tx(t.avoInfo,lang)}</div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          <div style={{fontSize:11,color:"#166534",fontWeight:700}}>{tx(t.avoSpacing,lang)}</div>
+          <div style={{fontSize:11,color:"#166534"}}>{tx(t.avoEmitter,lang)}</div>
+        </div>
+      </div>
+
+      {/* Seasonal fertigation */}
+      <Hdr icon="💧" title={tx(t.fertiHdr,lang)} accent={ACC}/>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+        {seasons.map(s=>(
+          <button key={s.id} onClick={()=>setSeason(s.id)} style={{padding:"6px 12px",borderRadius:20,fontSize:11,fontWeight:700,border:"none",cursor:"pointer",background:season===s.id?s.color:C.card,color:season===s.id?"#fff":C.muted,boxShadow:season===s.id?"0 2px 8px rgba(0,0,0,0.18)":"0 1px 3px rgba(0,0,0,0.07)",transition:"all 0.2s",touchAction:"manipulation"}}>{tx(s.label,lang)}</button>
+        ))}
+      </div>
+      <div style={{overflowX:"auto",marginBottom:16}}>
+        <div style={{minWidth:460}}>
+          <div style={{display:"grid",gridTemplateColumns:"0.7fr 1.8fr 0.9fr 2fr",gap:6,background:cur.color,padding:"8px 12px",borderRadius:"9px 9px 0 0"}}>
+            {[lang==="kn"?"ದಿನ":"Day",lang==="kn"?"ಉತ್ಪನ್ನ":"Product",lang==="kn"?"ಪ್ರಮಾಣ":"Rate",lang==="kn"?"ಉದ್ದೇಶ":"Purpose"].map((h,i)=><div key={i} style={{fontSize:9,fontWeight:800,color:"#fff",textTransform:"uppercase",letterSpacing:0.6}}>{h}</div>)}
+          </div>
+          {cur.rows.map((r,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:"0.7fr 1.8fr 0.9fr 2fr",gap:6,padding:"10px 12px",alignItems:"start",background:i%2===0?"#fff":"#f9fafb",border:`1px solid ${C.border}`,borderTop:"none",borderRadius:i===cur.rows.length-1?"0 0 9px 9px":"0"}}>
+              <div style={{fontSize:11,fontWeight:800,color:cur.color}}>{r.day}</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.text}}>{r.product}</div>
+              <div style={{fontSize:12,fontWeight:700,color:cur.color}}>{r.rate}</div>
+              <div style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{r[lang]||r.en}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <Note text={tx(cur.note,lang)} accent={cur.color}/>
+
+      {/* Micronutrients */}
+      <div style={{marginTop:18}}>
+        <Hdr icon="🧫" title={tx(t.microHdr,lang)} accent={ACC}/>
+        <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:10,padding:"9px 13px",marginBottom:12,fontSize:12,color:"#713f12"}}>
+          ⚠️ {tx(t.microWarning,lang)}
+        </div>
+        <div className="g2">
+          {avocadoMicro.map((m,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 13px",marginBottom:4}}>
+              <div style={{fontWeight:800,fontSize:13,color:ACC,marginBottom:5}}>{tx(m.nutrient,lang)} — {m.product}</div>
+              <div style={{display:"flex",gap:5,marginBottom:6,flexWrap:"wrap"}}>
+                <Bdg text={m.rate} bg="#dcfce7" color="#14532d"/>
+                <Bdg text={m.timing} bg={C.accentLight} color={C.accent}/>
+              </div>
+              <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{tx(m.method,lang)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="g2a" style={{marginTop:18}}>
+        {/* Phytophthora + Pruning */}
+        <div>
+          <Hdr icon="🛡️" title={tx(t.phytoHdr,lang)} accent="#d97706"/>
+          {fungicideProgram.map((f,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 13px",marginBottom:8}}>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
+                <Bdg text={`#${f.num}`} bg="#fef3c7" color="#78350f"/>
+                <Bdg text={tx(f.timing,lang)} bg={C.accentLight} color={C.accent}/>
+                <Bdg text={`FRAC ${f.frac}`} bg="#ede9fe" color="#5b21b6"/>
+                <Bdg text={tx(f.method,lang)} bg="#f3f4f6" color="#374151"/>
+              </div>
+              <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:3}}>{f.product}</div>
+              <div style={{fontSize:11,color:"#d97706",fontWeight:700,marginBottom:3}}>{f.rate}</div>
+              <div style={{fontSize:11.5,color:C.muted,lineHeight:1.5}}>{tx(f.note,lang)}</div>
+            </div>
+          ))}
+          <div style={{marginTop:16}}>
+            <Hdr icon="✂️" title={tx(t.pruneHdr,lang)} accent={ACC}/>
+            {[
+              {icon:"✅",title:tx(t.doRemove,lang),body:tx(t.doRemoveList,lang),accent:ACC},
+              {icon:"🚫",title:tx(t.doNotRemove,lang),body:tx(t.doNotList,lang),accent:"#dc2626"},
+            ].map((card,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${card.accent}`,borderRadius:10,padding:"10px 13px",marginBottom:8,display:"flex",gap:9}}>
+                <span style={{fontSize:18,flexShrink:0}}>{card.icon}</span>
+                <div><div style={{fontWeight:700,fontSize:12,color:card.accent,marginBottom:3}}>{card.title}</div><div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{card.body}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Mealybug + Alerts */}
+        <div>
+          <Hdr icon="🐛" title={tx(t.mealyHdr,lang)} accent="#dc2626"/>
+          {mealybugLadder.map((m,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${m.colors[0]}`,borderRadius:10,padding:"10px 13px",marginBottom:8}}>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:5}}>
+                <Bdg text={tx(m.priority,lang)} bg={m.colors[1]} color={m.colors[0]}/>
+                <Bdg text={tx(m.when,lang)} bg={C.accentLight} color={C.accent}/>
+              </div>
+              <div style={{fontWeight:700,fontSize:12,color:C.text,marginBottom:3}}>{m.product}</div>
+              <div style={{fontSize:11,color:m.colors[0],fontWeight:700,marginBottom:m.note?.en?4:0}}>{m.rate}</div>
+              {m.note?.en&&<div style={{fontSize:11.5,color:C.muted,lineHeight:1.5}}>{tx(m.note,lang)}</div>}
+            </div>
+          ))}
+          <div style={{marginTop:16}}>
+            <Hdr icon="⚠️" title={tx(t.alertsHdr,lang)} accent="#dc2626"/>
+            {[
+              {icon:"🧂",title:{en:"Chloride Toxicity",kn:"ಕ್ಲೋರೈಡ್ ವಿಷತ್ವ"},body:{en:"Leaf Cl >0.25% → irreversible tip necrosis. Verify Degania 169 Cl⁻ exclusion data from Indo Israel nursery.",kn:"ಎಲೆ Cl >0.25% → ಶಾಶ್ವತ ತುದಿ ನೆಕ್ರೋಸಿಸ್. Indo Israel ನರ್ಸರಿಯಿಂದ Degania 169 Cl⁻ ಡೇಟಾ ಪರಿಶೀಲಿಸಿ."},accent:"#dc2626"},
+              {icon:"🐝",title:{en:"No Neonics on Canopy",kn:"ಕ್ಯಾನಪಿಯಲ್ಲಿ ನಿಯೋನಿಕ್ ಬೇಡ"},body:{en:"Neonicotinoids in pollen/nectar reduce bee flight 54% — Hass/Ettinger cross-pollination collapses. Soil drench ONLY.",kn:"ಪರಾಗ/ಮಕರಂದದಲ್ಲಿ ನಿಯೋನಿಕ್ ಜೇನ್ ಹಾರಾಟ 54% ಕಡಿಮೆ — ಪರ-ಪರಾಗಸ್ಪರ್ಶ ಕುಸಿತ. ಮಣ್ಣು ಮಾತ್ರ."},accent:"#dc2626"},
+              {icon:"💉",title:{en:"No Trunk Injection Yet",kn:"ಈಗ ಟ್ರಂಕ್ ಇಂಜೆಕ್ಷನ್ ಬೇಡ"},body:{en:"Young avocado wounds heal slowly and risk Phytophthora entry. Defer trunk injection to Year 4+.",kn:"ಎಳೆಯ ಅವಕಾಡೋ ಗಾಯ ನಿಧಾನ ಗುಣ — ಫೈಟೋಫ್ಥೋರಾ ಪ್ರವೇಶ ಅಪಾಯ. ವರ್ಷ 4+ ವರೆಗೆ ಮುಂದೂಡಿ."},accent:"#d97706"},
+            ].map((card,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${card.accent}`,borderRadius:10,padding:"10px 13px",marginBottom:8,display:"flex",gap:9}}>
+                <span style={{fontSize:18,flexShrink:0}}>{card.icon}</span>
+                <div><div style={{fontWeight:700,fontSize:12,color:card.accent,marginBottom:3}}>{tx(card.title,lang)}</div><div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{tx(card.body,lang)}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── CUSTARD APPLE ─── */
+function CustardAppleTab(){
+  const lang=useLang();
+  const ACC="#b45309";
+  return(
+    <div className="fade-in">
+      <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:12,padding:"12px 15px",marginBottom:18,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:34}}>🍈</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#7c2d12"}}>{tx(t.caLbl,lang)} — 400 {lang==="kn"?"ಮರಗಳು":"Trees"}</div>
+          <div style={{fontSize:11.5,color:"#9a3412",marginTop:2,lineHeight:1.5}}>{tx(t.caInfo,lang)}</div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          <div style={{fontSize:11,color:"#9a3412",fontWeight:700}}>{lang==="kn"?"ಎಮಿಟರ್: 4 LPH":"Emitter: 4 LPH"}</div>
+          <div style={{fontSize:11,color:"#9a3412"}}>{lang==="kn"?"2 ಗಂಟೆ: 8L/ಮರ":"2-hr: 8L/tree"}</div>
+        </div>
+      </div>
+
+      <div className="g2a">
+        <div>
+          <Hdr icon="💧" title={tx(t.caFertiHdr,lang)} accent={ACC}/>
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"13px 14px",marginBottom:14}}>
+            <div style={{fontSize:12,color:C.muted,lineHeight:1.7,marginBottom:12}}>{tx(t.caFertiBase,lang)}</div>
+            <div style={{background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:8,padding:"10px 13px"}}>
+              <div style={{fontWeight:700,fontSize:12,color:ACC,marginBottom:5}}>{tx(t.caSupDrench,lang)}</div>
+              <div style={{fontSize:12,color:C.text,marginBottom:4}}>{tx(t.caSopLine,lang)}</div>
+              <div style={{fontSize:11.5,color:C.muted}}>{tx(t.caSopNote,lang)}</div>
+            </div>
+          </div>
+
+          <Hdr icon="🌿" title={tx(t.foliarHdr,lang)} accent={ACC}/>
+          <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"9px 13px",marginBottom:10,fontSize:12,color:"#14532d"}}>✅ {tx(t.foliarOk,lang)}</div>
+          {foliarSprays.map((f,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 13px",marginBottom:8}}>
+              <div style={{display:"flex",gap:5,marginBottom:6,flexWrap:"wrap"}}>
+                <Bdg text={f.num} bg="#ffedd5" color={ACC}/>
+                <Bdg text={tx(f.timing,lang)} bg={C.accentLight} color={C.accent}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:3}}>{f.mix}</div>
+              <div style={{fontSize:11,color:C.muted}}>{tx(t.per100L,lang)}</div>
+              {f.note.en&&<div style={{fontSize:11,color:"#d97706",marginTop:4}}>⚠ {tx(f.note,lang)}</div>}
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <Hdr icon="✂️" title={tx(t.pruneHdrCA,lang)} accent={ACC}/>
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"13px 14px",marginBottom:14}}>
+            <div style={{fontWeight:700,color:ACC,fontSize:13,marginBottom:8}}>{tx(t.pruneTiming,lang)}</div>
+            <div style={{fontSize:12,color:C.muted,lineHeight:1.7,marginBottom:10}}>{tx(t.pruneWhy,lang)}</div>
+            {[
+              {en:"Head back central leader at 90 cm height",kn:"90 cm ಎತ್ತರದಲ್ಲಿ ಮುಖ್ಯ ಕಾಂಡ ಕಡಿಯಿರಿ"},
+              {en:"Remove 30–40% of previous terminal growth",kn:"ಹಿಂದಿನ 30–40% ತುದಿ ಬೆಳವಣಿಗೆ ತೆಗೆಯಿರಿ"},
+              {en:"Thin interior for open-center vase shape",kn:"ತೆರೆದ-ಕೇಂದ್ರ ವೇಸ್ ಆಕಾರಕ್ಕೆ ಒಳಭಾಗ ತೆಳ್ಳಗಾಗಿಸಿ"},
+              {en:"Target 4–5 scaffold branches at 45–60° angles",kn:"45–60° ಕೋನದಲ್ಲಿ 4–5 ಸ್ಕ್ಯಾಫೋಲ್ಡ್ ಕೊಂಬೆ"},
+              {en:"All cuts clean — treat with copper paste",kn:"ಎಲ್ಲಾ ಕಟ್ ಸ್ವಚ್ಛ — ಕಾಪರ್ ಪೇಸ್ಟ್ ಹಚ್ಚಿ"},
+            ].map((s,si)=>(
+              <div key={si} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
+                <span style={{color:ACC,fontWeight:800,fontSize:12,flexShrink:0}}>{si+1}.</span>
+                <span style={{fontSize:12,color:C.muted,lineHeight:1.5}}>{tx(s,lang)}</span>
+              </div>
+            ))}
+          </div>
+
+          <Hdr icon="💦" title={tx(t.irrigHdr,lang)} accent={ACC}/>
+          <div style={{overflowX:"auto"}}>
+            <table style={{minWidth:340,borderRadius:10,overflow:"hidden",border:`1px solid ${C.border}`}}>
+              <thead>
+                <tr style={{background:ACC}}>
+                  {[lang==="kn"?"ಸಂದರ್ಭ":"Scenario","🥑","🍈","🍃"].map((h,i)=>(
+                    <th key={i} style={{padding:"7px 9px",fontSize:10,fontWeight:800,color:"#fff",textAlign:"left",textTransform:"uppercase",letterSpacing:0.4}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {irrigationProtocol.map((r,i)=>{
+                  const gc=(v)=>(v.en||v).includes("OPEN")||(v.en||v).includes("Daily")||(v.en||v).includes("week")||(v.kn||"").includes("ತೆರೆದ")?"#16a34a":"#dc2626";
+                  return(
+                    <tr key={i} style={{background:i%2===0?"#fff":"#faf8f3"}}>
+                      <td style={{padding:"7px 9px",fontSize:11,color:C.text,fontWeight:600,borderBottom:`1px solid ${C.border}`}}>{tx(r.scenario,lang)}</td>
+                      <td style={{padding:"7px 9px",fontSize:11,color:gc(r.avo),fontWeight:700,borderBottom:`1px solid ${C.border}`}}>{tx(r.avo,lang)}</td>
+                      <td style={{padding:"7px 9px",fontSize:11,color:gc(r.ca),fontWeight:700,borderBottom:`1px solid ${C.border}`}}>{tx(r.ca,lang)}</td>
+                      <td style={{padding:"7px 9px",fontSize:11,color:gc(r.guava),fontWeight:700,borderBottom:`1px solid ${C.border}`}}>{tx(r.guava,lang)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{marginTop:16}}>
+            <Hdr icon="🧪" title={tx(t.anthracHdr,lang)} accent="#78350f"/>
+            <div style={{overflowX:"auto"}}>
+              <div style={{minWidth:340}}>
+                <div style={{display:"grid",gridTemplateColumns:"0.4fr 1.2fr 1.8fr 0.8fr",gap:5,background:"#78350f",padding:"7px 11px",borderRadius:"9px 9px 0 0"}}>
+                  {["#",lang==="kn"?"ಸಮಯ":"Timing",lang==="kn"?"ಉತ್ಪನ್ನ":"Product",lang==="kn"?"ಪ್ರಮಾಣ":"Rate"].map((h,i)=><div key={i} style={{fontSize:9,fontWeight:800,color:"#fff",textTransform:"uppercase",letterSpacing:0.5}}>{h}</div>)}
+                </div>
+                {anthracnose.map((a,i)=>(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"0.4fr 1.2fr 1.8fr 0.8fr",gap:5,padding:"8px 11px",background:i%2===0?"#fff":"#faf8f3",border:`1px solid ${C.border}`,borderTop:"none",borderRadius:i===anthracnose.length-1?"0 0 9px 9px":"0"}}>
+                    <div style={{fontSize:11,fontWeight:800,color:"#78350f"}}>{a.num}</div>
+                    <div style={{fontSize:11,color:C.muted}}>{tx(a.timing,lang)}</div>
+                    <div style={{fontSize:11,fontWeight:600,color:C.text}}>{a.product}</div>
+                    <div style={{fontSize:11,fontWeight:800,color:"#78350f"}}>{a.rate}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── GUAVA ─── */
+function GuavaTab(){
+  const lang=useLang();
+  const ACC="#9f1239";
+  return(
+    <div className="fade-in">
+      <div style={{background:"#fff1f2",border:"1px solid #fecdd3",borderRadius:12,padding:"12px 15px",marginBottom:14,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:34}}>🍃</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:"#881337"}}>{tx(t.guavaLbl,lang)} — 1,000 {lang==="kn"?"ಮರಗಳು":"Trees"}</div>
+          <div style={{fontSize:11.5,color:ACC,marginTop:2,lineHeight:1.5}}>{tx(t.guavaInfo,lang)}</div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          <div style={{fontSize:11,color:ACC,fontWeight:700}}>{lang==="kn"?"ಎಮಿಟರ್: 2 LPH":"Emitter: 2 LPH"}</div>
+          <div style={{fontSize:11,color:ACC}}>{lang==="kn"?"2 ಗಂಟೆ: 4L/ಮರ":"2-hr: 4L/tree"}</div>
+        </div>
+      </div>
+
+      <div style={{background:"#fff1f2",border:"2px solid #fca5a5",borderRadius:12,padding:"12px 15px",marginBottom:18}}>
+        <div style={{fontWeight:700,color:"#dc2626",fontSize:14,marginBottom:6}}>{tx(t.guavaCrisis,lang)}</div>
+        <div style={{fontSize:12,color:"#7f1d1d",lineHeight:1.7}}>{tx(t.guavaCrisisDetail,lang)}</div>
+      </div>
+
+      <div className="g2a">
+        <div>
+          <Hdr icon="🌺" title={tx(t.deblosHdr,lang)} accent="#dc2626"/>
+          <div style={{background:C.card,border:"1px solid #fca5a5",borderRadius:12,padding:"13px 14px",marginBottom:14}}>
+            <div style={{fontWeight:700,color:"#dc2626",fontSize:13,marginBottom:10}}>{lang==="kn"?"ಎರಡು ವಿಧಾನ — ಒಂದು ಅಥವಾ ಎರಡೂ ಉಪಯೋಗಿಸಿ":"Two Methods — Use One or Both"}</div>
+            {[
+              {title:{en:"Method A — NAA Chemical (Planofix)",kn:"ವಿಧಾನ A — NAA ರಾಸಾಯನಿಕ (Planofix)"},body:{en:"NAA 50–100 ppm. Planofix: 1.5–3 mL per 10L water. Spray to runoff on full canopy. More reliable for large-scale deblossoming.",kn:"NAA 50–100 ppm. Planofix: 10L ನೀರಿಗೆ 1.5–3 mL. ಸಂಪೂರ್ಣ ಕ್ಯಾನಪಿ ಹರಿಯುವವರೆಗೆ ಸ್ಪ್ರೇ. ದೊಡ್ಡ ಪ್ರಮಾಣಕ್ಕೆ ಹೆಚ್ಚು ವಿಶ್ವಾಸಾರ್ಹ."},accent:"#dc2626"},
+              {title:{en:"Method B — 10% Urea Spray",kn:"ವಿಧಾನ B — 10% ಯೂರಿಯಾ ಸ್ಪ್ರೇ"},body:{en:"Dissolve 1 kg urea in 10L water. Spray full canopy to runoff. Low-cost and readily available. Can be combined with NAA.",kn:"1 kg ಯೂರಿಯಾ 10L ನೀರಿನಲ್ಲಿ ಕರಗಿಸಿ. ಸಂಪೂರ್ಣ ಕ್ಯಾನಪಿ ಹರಿಯುವವರೆಗೆ ಸ್ಪ್ರೇ. ಕಡಿಮೆ ಬೆಲೆ. NAA ಜೊತೆ ಬಳಸಬಹುದು."},accent:"#d97706"},
+            ].map((m,i)=>(
+              <div key={i} style={{background:`${m.accent}0f`,border:`1px solid ${m.accent}44`,borderRadius:8,padding:"10px 12px",marginBottom:i===0?8:0}}>
+                <div style={{fontWeight:700,fontSize:12,color:m.accent,marginBottom:4}}>{tx(m.title,lang)}</div>
+                <div style={{fontSize:12,color:C.muted,lineHeight:1.6}}>{tx(m.body,lang)}</div>
+              </div>
+            ))}
+          </div>
+
+          <Hdr icon="✂️" title={tx(t.canopyHdr,lang)} accent={ACC}/>
+          {[
+            {step:"1",en:{t:"Clean trunk below 60 cm",d:"Remove all shoots, leaves, laterals below 60 cm to create clean framework and reduce fungal habitat."},kn:{t:"60 cm ಕೆಳಗೆ ಟ್ರಂಕ್ ಸ್ವಚ್ಛ",d:"60 cm ಕೆಳಗಿನ ಎಲ್ಲಾ ಚಿಗುರು, ಎಲೆ, ಲ್ಯಾಟರಲ್ ತೆಗೆಯಿರಿ."}},
+            {step:"2",en:{t:"Head back at 75–80 cm → 50–60 cm",d:"Cut main stem at scaffold height to promote uniform branching for umbrella canopy architecture."},kn:{t:"75–80 cm ಲ್ಲಿ ಕಡಿಯಿರಿ → 50–60 cm",d:"ಏಕರೂಪ ಶಾಖೆಗೆ ಕ್ಯಾನಪಿ ಎತ್ತರದಲ್ಲಿ ಮುಖ್ಯ ಕಾಂಡ ಕಡಿಯಿರಿ."}},
+            {step:"3",en:{t:"Select 3–5 primary scaffold branches",d:"Choose branches at 45–60° angles in umbrella formation. Remove competing branches."},kn:{t:"3–5 ಮುಖ್ಯ ಸ್ಕ್ಯಾಫೋಲ್ಡ್ ಆಯ್ಕೆ",d:"ಛತ್ರಿ ರಚನೆಯಲ್ಲಿ 45–60° ಕೊಂಬೆ ಆಯ್ಕೆ. ಸ್ಪರ್ಧಿ ಕೊಂಬೆ ತೆಗೆಯಿರಿ."}},
+            {step:"4 (Sep–Oct)",en:{t:"Tip prune 10 cm",d:"Once scaffolds established, tip prune 10 cm per shoot to encourage secondary branching."},kn:{t:"ತುದಿ 10 cm ಕತ್ತರಿಸಿ",d:"ಸ್ಕ್ಯಾಫೋಲ್ಡ್ ನಿರ್ಮಾಣ ನಂತರ ಪ್ರತಿ ಚಿಗುರು 10 cm ಕತ್ತರಿಸಿ ದ್ವಿತೀಯ ಶಾಖೆ ಉತ್ತೇಜಿಸಿ."}},
+          ].map((s,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${ACC}`,borderRadius:10,padding:"10px 13px",marginBottom:8}}>
+              <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
+                <Bdg text={`Step ${s.step}`} bg="#ffe4e6" color={ACC}/>
+                <span style={{fontWeight:700,fontSize:12,color:C.text}}>{s[lang]?.t||s.en.t}</span>
+              </div>
+              <div style={{fontSize:11.5,color:C.muted,lineHeight:1.6}}>{s[lang]?.d||s.en.d}</div>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <Hdr icon="💧" title={tx(t.guavaFertiHdr,lang)} accent={ACC}/>
+          <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"13px 14px",marginBottom:14}}>
+            <div style={{fontSize:12,color:C.muted,lineHeight:1.7,marginBottom:12}}>{tx(t.guavaFertiBase,lang)}</div>
+            <div style={{background:"#fff1f2",border:"1px solid #fecdd3",borderRadius:8,padding:"10px 13px"}}>
+              <div style={{fontWeight:700,fontSize:12,color:ACC,marginBottom:5}}>{tx(t.guavaSupDrench,lang)}</div>
+              <div style={{fontSize:12,color:C.text,marginBottom:4}}>{tx(t.guavaSupLine,lang)}</div>
+              <div style={{fontSize:11.5,color:C.muted}}>{lang==="kn"?"ಆಮ್ಲ ನೀರು (pH 5.5). ಕ್ಷಾರ ಮಣ್ಣಿನಲ್ಲಿ P ಲಭ್ಯತೆ ಸುಧಾರಣೆ.":"Acidified water pH 5.5. Improves P availability in alkaline soil."}</div>
+            </div>
+          </div>
+
+          <Hdr icon="🌿" title={tx(t.foliarHdr,lang)} accent={ACC}/>
+          <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"9px 13px",marginBottom:10,fontSize:12,color:"#14532d"}}>✅ {tx(t.guavaFoliarOk,lang)}</div>
+          {foliarSprays.map((f,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 13px",marginBottom:8}}>
+              <div style={{display:"flex",gap:5,marginBottom:6,flexWrap:"wrap"}}>
+                <Bdg text={f.num} bg="#ffe4e6" color={ACC}/>
+                <Bdg text={tx(f.timing,lang)} bg={C.accentLight} color={C.accent}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:3}}>{f.mix}</div>
+              <div style={{fontSize:11,color:C.muted}}>{tx(t.per100L,lang)}</div>
+              {f.note.en&&<div style={{fontSize:11,color:"#d97706",marginTop:4}}>⚠ {tx(f.note,lang)}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── INVENTORY ─── */
+function InventoryTab({inventory,setInventory,onLogout}){
+  const lang=useLang();
+  const [filter,setFilter]=useState("all");
+  const catKeys=["all",...Array.from(new Set(inventory.map(i=>i.cat.en)))];
+  const filtered=filter==="all"?inventory:inventory.filter(i=>i.cat.en===filter);
+  const lowCount=inventory.filter(i=>i.stock<=i.min).length;
+  const update=(id,d)=>setInventory(inv=>inv.map(item=>item.id===id?{...item,stock:Math.max(0,item.stock+d)}:item));
+  const cols=t.invCols;
+  return(
+    <div className="fade-in">
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:6,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:C.primary}}>{tx(t.invTitle,lang)}</div>
+          <div style={{color:C.muted,fontSize:13,marginTop:3}}>{tx(t.invSub,lang)}</div>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          {lowCount>0&&<div style={{background:"#fde8e8",border:"1px solid #fca5a5",borderRadius:8,padding:"5px 10px",fontSize:11,color:"#7f1d1d",fontWeight:700}}>⚠ {lowCount} {tx(t.invItemsLow,lang)}</div>}
+          <button onClick={onLogout} style={{padding:"6px 13px",borderRadius:8,border:`1px solid ${C.border}`,background:C.card,color:C.muted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{tx(t.signOut,lang)}</button>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",margin:"12px 0 14px"}}>
+        {catKeys.map(ck=>{
+          const disp=ck==="all"?tx(t.all,lang):(lang==="kn"?inventory.find(i=>i.cat.en===ck)?.cat.kn||ck:ck);
+          const count=ck==="all"?inventory.length:inventory.filter(i=>i.cat.en===ck).length;
+          return(
+            <button key={ck} onClick={()=>setFilter(ck)} style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",border:`1.5px solid ${filter===ck?C.primary:C.border}`,background:filter===ck?C.primary:C.card,color:filter===ck?"#fff":C.muted,transition:"all 0.15s",touchAction:"manipulation"}}>
+              {disp}{filter===ck?` (${count})`:""}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{overflowX:"auto"}}>
+        <div style={{minWidth:480}}>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1.1fr 1fr 0.6fr 0.8fr 0.9fr",gap:7,background:C.primary,padding:"9px 13px",borderRadius:"10px 10px 0 0"}}>
+            {[cols.product,cols.cat,cols.unit,cols.min,cols.stock,cols.adj].map((h,i)=><div key={i} style={{fontSize:9,fontWeight:800,color:"#9dc4a8",textTransform:"uppercase",letterSpacing:0.5}}>{tx(h,lang)}</div>)}
+          </div>
+          {filtered.map((item,i)=>{
+            const isLow=item.stock<=item.min;
+            const catKey=item.cat.en;
+            const cc=catColors[catKey]||"#5a5a6a";
+            const catDisp=lang==="kn"?item.cat.kn:item.cat.en;
+            return(
+              <div key={item.id} style={{display:"grid",gridTemplateColumns:"2fr 1.1fr 1fr 0.6fr 0.8fr 0.9fr",gap:7,padding:"10px 13px",alignItems:"center",borderBottom:i<filtered.length-1?`1px solid ${C.border}`:"none",background:isLow?"#fff8f8":(i%2===0?"#fff":"#faf8f3"),border:`1px solid ${C.border}`,borderTop:"none",borderRadius:i===filtered.length-1?"0 0 10px 10px":"0"}}>
+                <div style={{display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{fontSize:10}}>{isLow?"🔴":"🟢"}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:C.text}}>{item.name}</span>
+                </div>
+                <span style={{fontSize:10,padding:"2px 6px",borderRadius:20,fontWeight:700,background:`${cc}22`,color:cc,display:"inline-block"}}>{catDisp}</span>
+                <span style={{fontSize:11,color:C.muted}}>{item.unit}</span>
+                <span style={{fontSize:12,color:C.muted,fontWeight:600}}>{item.min}</span>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontSize:14,fontWeight:800,color:isLow?"#dc2626":C.secondary}}>{item.stock}</span>
+                  {isLow&&<span style={{fontSize:8,color:"#dc2626",fontWeight:800,background:"#fee2e2",padding:"1px 4px",borderRadius:3}}>{lang==="kn"?"ಕಡಿಮೆ":"LOW"}</span>}
+                </div>
+                <div style={{display:"flex",gap:5}}>
+                  <button onClick={()=>update(item.id,-1)} style={{width:30,height:30,borderRadius:7,border:"1px solid #fca5a5",background:"#fef2f2",color:"#dc2626",fontSize:16,fontWeight:700,cursor:"pointer",touchAction:"manipulation"}}>−</button>
+                  <button onClick={()=>update(item.id,1)}  style={{width:30,height:30,borderRadius:7,border:"1px solid #86efac",background:"#f0fdf4",color:"#16a34a",fontSize:16,fontWeight:700,cursor:"pointer",touchAction:"manipulation"}}>+</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{marginTop:10,fontSize:11,color:C.muted}}>{tx(t.invFooter,lang)}</div>
+    </div>
+  );
+}
+
+/* ─── APP ─── */
+function App(){
+  const [lang,setLang]=useState("en");
+  const [tab,setTab]=useState("overview");
+  const [loggedIn,setLoggedIn]=useState(false);
+  const [showLogin,setShowLogin]=useState(false);
+  const wdi=new Date().getDay();
+  const [day,setDay]=useState(weekDaysEn[wdi===0?6:wdi-1]);
+  const [inventory,setInventory]=useState(initialInventory);
+  const lowStock=inventory.filter(i=>i.stock<=i.min);
+
+  const goToTab=(id)=>{if(id==="inventory"&&!loggedIn){setShowLogin(true);}else{setTab(id);setShowLogin(false);}};
+  const handleLogin=()=>{setLoggedIn(true);setShowLogin(false);setTab("inventory");};
+  const handleLogout=()=>{setLoggedIn(false);setTab("overview");};
+
+  const fontClass=lang==="kn"?"kn":"";
+
+  const tabs=[
+    {id:"overview",    en:"🏡 Overview", kn:"🏡 ಸಾರಾಂಶ"},
+    {id:"avocado",     en:"🥑 Avocado",  kn:"🥑 ಅವಕಾಡೋ"},
+    {id:"custardapple",en:"🍈 Custard Apple",kn:"🍈 ಸೀತಾಫಲ"},
+    {id:"guava",       en:"🍃 Guava",    kn:"🍃 ಸೀಬೆ"},
+    {id:"inventory",   en:"📦 Inventory",kn:"📦 ದಾಸ್ತಾನು"},
+  ];
+
+  if(showLogin) return <LangCtx.Provider value={lang}><div className={fontClass}><LoginScreen onLogin={handleLogin} onCancel={()=>setShowLogin(false)}/></div></LangCtx.Provider>;
+
+  return(
+    <LangCtx.Provider value={lang}>
+      <div className={fontClass} style={{fontFamily:lang==="kn"?"'Noto Sans Kannada',sans-serif":"'DM Sans',sans-serif",minHeight:"100vh",background:C.bg}}>
+        {/* HEADER */}
+        <div className="page-header" style={{background:C.header,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+            <span style={{fontSize:26,flexShrink:0}}>🌿</span>
+            <div style={{minWidth:0}}>
+              <div style={{fontFamily:"'Playfair Display',serif",color:"#fff",fontSize:15,fontWeight:700,lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx(t.farmTitle,lang)}</div>
+              <div className="hdr-sub" style={{color:"#7dbf94",fontSize:10,marginTop:2}}>{tx(t.farmSub,lang)}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+            {lowStock.length>0&&<div style={{background:"#7f1d1d",color:"#fecaca",fontSize:10,padding:"3px 8px",borderRadius:20,fontWeight:700}}>⚠ {lowStock.length} {tx(t.lowStock,lang)}</div>}
+            {/* Language toggle */}
+            <div className="lang-btn">
+              <button onClick={()=>setLang("en")} style={{background:lang==="en"?C.accent:"rgba(255,255,255,0.1)",color:lang==="en"?"#fff":"rgba(255,255,255,0.7)"}}>EN</button>
+              <button onClick={()=>setLang("kn")} style={{background:lang==="kn"?C.accent:"rgba(255,255,255,0.1)",color:lang==="kn"?"#fff":"rgba(255,255,255,0.7)"}}>ಕ</button>
+            </div>
+            <div style={{color:"#7dbf94",fontSize:10,fontWeight:600}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</div>
+          </div>
+        </div>
+
+        {/* TAB BAR */}
+        <div style={{background:C.primary,padding:"0 8px",display:"flex",gap:0,overflowX:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
+          {tabs.map(t2=>(
+            <button key={t2.id} className="tab-btn" onClick={()=>goToTab(t2.id)} style={{padding:"10px 12px",fontSize:11,fontWeight:tab===t2.id?700:400,border:"none",cursor:"pointer",color:tab===t2.id?C.accent:"#7dbf94",background:tab===t2.id?"rgba(193,127,58,0.15)":"transparent",borderBottom:tab===t2.id?"2.5px solid "+C.accent:"2.5px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s",flexShrink:0}}>
+              {t2[lang]}
+              {t2.id==="inventory"&&!loggedIn&&<span style={{fontSize:9,marginLeft:3,opacity:0.65}}>🔒</span>}
+              {t2.id==="inventory"&& loggedIn&&<span style={{fontSize:9,marginLeft:3}}>🟢</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* CONTENT */}
+        <main style={{padding:"16px 18px",maxWidth:1100,margin:"0 auto"}}>
+          {tab==="overview"     &&<OverviewTab     day={day} setDay={setDay}/>}
+          {tab==="avocado"      &&<AvocadoTab/>}
+          {tab==="custardapple" &&<CustardAppleTab/>}
+          {tab==="guava"        &&<GuavaTab/>}
+          {tab==="inventory"    &&<InventoryTab    inventory={inventory} setInventory={setInventory} onLogout={handleLogout}/>}
+        </main>
+      </div>
+    </LangCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
