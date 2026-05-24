@@ -23,6 +23,7 @@ table{border-collapse:collapse;width:100%}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .fade-in{animation:fadeIn 0.25s ease forwards}
+@keyframes pulse{0%,100%{opacity:0.6;transform:scale(0.85);box-shadow:0 0 4px rgba(56,189,248,0.4)}50%{opacity:1;transform:scale(1.15);box-shadow:0 0 12px rgba(56,189,248,0.8)}}
 /* Grid system */
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -1346,6 +1347,69 @@ function App(){
               <div className="hdr-sub" style={{color:"#7dbf94",fontSize:10,marginTop:2}}>{tx(t.farmSub,lang)}</div>
             </div>
           </div>
+
+          {/* GATEWAY ROUTER SWITCHER */}
+          <div className="gateway-router" style={{
+            display: "flex",
+            background: "rgba(0, 0, 0, 0.25)",
+            padding: "3px",
+            borderRadius: "24px",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            alignItems: "center",
+            gap: "2px",
+            margin: "0 10px"
+          }}>
+            <a href="https://farm.tizisit.com" style={{
+              padding: "6px 14px",
+              borderRadius: "20px",
+              fontSize: "11px",
+              fontWeight: "800",
+              textDecoration: "none",
+              background: "rgba(255, 255, 255, 0.12)",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+              transition: "all 0.25s ease",
+              letterSpacing: "0.3px"
+            }}>
+              <span style={{fontSize: "12px"}}>🌾</span> {lang === "kn" ? "ಶಿರೋ ತೋಟ" : "Shiro Farm"}
+            </a>
+            <a href="https://akashavani.tizisit.com" style={{
+              padding: "6px 14px",
+              borderRadius: "20px",
+              fontSize: "11px",
+              fontWeight: "800",
+              textDecoration: "none",
+              color: "#7dbf94",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.25s ease",
+              letterSpacing: "0.3px"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#38bdf8";
+              e.currentTarget.style.background = "rgba(56, 189, 248, 0.08)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#7dbf94";
+              e.currentTarget.style.background = "transparent";
+            }}>
+              <span style={{
+                display: "inline-block",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                background: "#38bdf8",
+                boxShadow: "0 0 6px #38bdf8",
+                animation: "pulse 1.8s infinite ease-in-out"
+              }}></span>
+              <span style={{fontSize: "12px"}}>🧠</span> {lang === "kn" ? "ಆಕಾಶವಾಣಿ AI" : "Akashavani AI"}
+            </a>
+          </div>
+
           <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
             {lowStock.length>0&&<div style={{background:"#7f1d1d",color:"#fecaca",fontSize:10,padding:"3px 8px",borderRadius:20,fontWeight:700}}>⚠ {lowStock.length} {tx(t.lowStock,lang)}</div>}
             {/* Language toggle */}
